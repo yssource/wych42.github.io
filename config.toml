@@ -1,0 +1,19 @@
+baseURL = "https://wych.blog/"
+languageCode = "zh-cn"
+title = "W's Journal"
+theme = "beautifulhugo"
+
+[params]
+  subtitle = "已过的世代无人记念，将来的世代后来的人也不记念。"
+  author = "Richard.W"
+
+[blackfriday]
+  angledQuotes = true
+  fractions = false
+  plainIDAnchors = true
+  extensions = ["hardLineBreak"]
+
+[[menu.main]]
+    name = "Blog"
+    url = ""
+    weight = 1
