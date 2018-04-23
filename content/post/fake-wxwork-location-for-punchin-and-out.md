@@ -8,7 +8,7 @@ tags:
   - Android
   - 微信
   - 工作
-draft: true
+draft: false
 ---
 
 > 做人要诚信。 -- 鲁迅.
