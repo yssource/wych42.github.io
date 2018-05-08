@@ -1,7 +1,6 @@
 ---
 title: "无用功|企业微信自动打卡"
 subtitle: "使用 Xposed 模拟位置，定时运行 adb shell 模拟动作"
-slug: "fake-wxwork-location-and-auto-punch-in_and_out"
 date: 2018-04-23T14:11:22+08:00
 tags:
   - 无用功
