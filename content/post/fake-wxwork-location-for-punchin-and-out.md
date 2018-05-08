@@ -9,7 +9,10 @@ tags:
   - 微信
   - 工作
 draft: false
+toc: true
 ---
+
+一种简单绕过定位打卡制度的方法。For Freedom!
 
 > 做人要诚信。 -- 鲁迅.
 

@@ -1,15 +1,19 @@
 baseURL = "https://wych.blog/"
 languageCode = "zh-cn"
 title = "W's Journal"
-theme = "beautifulhugo"
+theme = "hugo-octopress"
 
 [params]
-  subtitle = "Prepare your minds."
+  subtitle = "Make it Bigger!"
   author = "W"
+  searchEngineURL = "https://www.google.com/search"
+  rss = true
+
 
 [blackfriday]
+  hrefTargetBlank = true
   angledQuotes = true
-  fractions = false
+  fractions = true
   plainIDAnchors = true
   extensions = ["hardLineBreak"]
 
