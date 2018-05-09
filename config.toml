@@ -9,8 +9,7 @@ theme = "hugo-octopress"
   searchEngineURL = "https://www.google.com/search"
   rss = true
   sidebarHeader = "Intro"
-  sidebarText = "一点微小的关于摩托车修理的人生经验。"
-
+  sidebarText = "一点微小的人生经验。"
 
 [blackfriday]
   hrefTargetBlank = true
@@ -24,3 +23,7 @@ theme = "hugo-octopress"
   url = "/"
   weight = -10
 
+[[menu.main]]
+  name = "FinWeekly"
+  url = "/issue"
+  weight = 1
