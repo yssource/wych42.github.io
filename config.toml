@@ -1,11 +1,11 @@
-baseURL = "https://wych.blog/"
+baseURL = "https://yuchi.me/"
 languageCode = "zh-cn"
-title = "W's Journal"
+title = "Yuchi's Journal"
 theme = "hugo-octopress"
 
 [params]
   subtitle = "Make it Bigger!"
-  author = "W"
+  author = "鱼翅"
   searchEngineURL = "https://www.google.com/search"
   rss = true
   sidebarHeader = "Intro"
