@@ -1,15 +1,17 @@
 baseURL = "https://yuchi.me/"
 languageCode = "zh-cn"
-title = "Yuchi's Journal"
+title = "Chi's Journal"
 theme = "hugo-octopress"
+pygmentsCodeFences = true
+disqusShortname = "chis-journal"
 
 [params]
   subtitle = "Make it Bigger!"
-  author = "鱼翅"
+  author = "chi"
   searchEngineURL = "https://www.google.com/search"
   rss = true
-  sidebarHeader = "Intro"
-  sidebarText = "一点微小的人生经验。"
+  sidebarHeader = ""
+  sidebarText = """>> 已过的世代，无人记念；将来的世代，后来的人也不纪念。 - Ecclesiastes 1.11"""
 
 [blackfriday]
   hrefTargetBlank = true
@@ -24,6 +26,11 @@ theme = "hugo-octopress"
   weight = -10
 
 [[menu.main]]
-  name = "FinWeekly"
-  url = "/issue"
-  weight = 1
+  name = "Archive"
+  url = "/archive"
+  weight = -9
+
+# [[menu.main]]
+#   name = "FinWeekly"
+#   url = "/issue"
+#   weight = 1
