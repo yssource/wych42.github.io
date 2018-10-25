@@ -1,9 +1,10 @@
 +++
-title = "无用功|企业微信远程打卡"
+title = "企业微信远程打卡"
 author = ["chi"]
 date = 2018-04-23T13:41:00+08:00
-lastmod = 2018-10-25T14:01:37+08:00
+lastmod = 2018-10-25T15:07:44+08:00
 tags = ["wechat", "work"]
+categories = ["无用功"]
 draft = false
 toc = false
 +++

@@ -1,9 +1,10 @@
 +++
-title = "实用功|beancount 简易入门指南"
+title = "beancount 简易入门指南"
 author = ["chi"]
 date = 2018-10-25T12:25:00+08:00
-lastmod = 2018-10-25T13:59:36+08:00
+lastmod = 2018-10-25T15:09:19+08:00
 tags = ["beancount", "记账"]
+categories = ["实用功"]
 draft = false
 toc = true
 +++

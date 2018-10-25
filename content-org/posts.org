@@ -22,7 +22,7 @@
 :EXPORT_HUGO_SECTION: post
 :END:
 
-** DONE 无用功|企业微信远程打卡                                                 :wechat:work:
+** DONE 企业微信远程打卡                                                 :wechat:work:@无用功:
    CLOSED: [2018-04-23 Thu 13:41]
    :PROPERTIES:
    :EXPORT_HUGO_BUNDLE: wechat-punch
@@ -61,14 +61,14 @@
 
  好用的 GPS、基站工具：[[http://www.gpsspg.com/][GPSspg]], [[http://www.cellocation.com/][cellocation 坐标反查基站接口]]
 
-** DONE 实用功|beancount 简易入门指南                                           :beancount:记账:
-CLOSED: [2018-10-25 Thu 12:25]
-:PROPERTIES:
-:EXPORT_HUGO_BUNDLE: beancount-intro
-:EXPORT_FILE_NAME: index
-:EXPORT_DATE: [2018-10-23 Tue 12:46]
-:EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
-:END:
+** DONE beancount 简易入门指南                                           :beancount:记账:@实用功:
+   CLOSED: [2018-10-25 Thu 12:25]
+   :PROPERTIES:
+   :EXPORT_HUGO_BUNDLE: beancount-intro
+   :EXPORT_FILE_NAME: index
+   :EXPORT_DATE: [2018-10-23 Tue 12:46]
+   :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
+   :END:
 
 beancount 是一个基于文本、命令行的复式记账软件，上周看到了 [[https://wzyboy.im/post/1063.html][wzyboy]] 介绍这个工具以及复式记账的基础概念的安利文。花了一点时间入坑之后，自己的资产（存款）、收入、消费去向，一目了然。看到食物消费和打车话费在支出的 TreeMap 里占据的两大块，不禁让我反思起平时的好吃懒做。
 
