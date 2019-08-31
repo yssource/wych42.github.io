@@ -2,7 +2,7 @@
 title = "beancount 简易入门指南"
 author = ["chi"]
 date = 2018-10-25T12:25:00+08:00
-lastmod = 2018-10-25T15:09:19+08:00
+lastmod = 2018-10-26T16:24:25+08:00
 tags = ["beancount", "记账"]
 categories = ["实用功"]
 draft = false
@@ -16,9 +16,9 @@ beancount 是一个基于文本、命令行的复式记账软件，上周看到�
 如果你跟我类似：
 
 -   靠月工资流水生存，有强烈的意愿、需求理清自己的财务状态，搞清楚钱从哪里来、花到哪里去、留下了多少，并借机改善；
--   虽然平时也是用过鲨鱼记账、随手记之类的 App，但是觉得每有一次消费后掏出手机、打开 App、填写金额时间用途，是一个很重的中断行为；也懒得定期手工录入一批账单；
--   绝大多书消费最终都由银行账户结算，例如通过支付宝绑定信用卡快捷支付，最终只需要统计银行账单即可；
--   懂一点编程（简单的 Python 基础即可），愿意付出一点时间学习。
+-   虽然平时也用过鲨鱼记账、随手记之类的 App，但是觉得每一次消费后掏出手机、打开 App、填写金额时间用途，是一个很重的中断行为；也懒得定期手工录入一批账单；
+-   绝大多数消费最终都由银行账户结算，例如通过支付宝绑定信用卡快捷支付，最终只需要统计银行账单即可；
+-   懂一点编程（简单的 Python 基础即可），愿意付出一点时间学习；
 
 那么，beancount 这个工具会是一个比较合适的开始。
 
@@ -57,12 +57,12 @@ beancount 是一个基于文本、命令行的复式记账软件，上周看到�
 └── yc.import
 ```
 
--   ~/Documents/accounting: 项目的根目录，放在任何相放的地方;
--   documents: 用于导入第三方数据后，用 bean-file 归类存档原文件，用 `mkdir documents/{Assets,Expenses,Inconme,Liabilities}` 创建这些目录;
--   documents.tmp: 用于临时存放准备导入的第三方数据，比如银行卡账单，可以是其他路径，比如 `/tmp`, bean-extract, bean-file 这些脚本都要用到这个目录;
+-   ~/Documents/accounting: 项目的根目录，放在任何想放的地方;
+-   documents: 用于导入第三方数据后，使用 bean-file 归类存档原文件，执行 `mkdir documents/{Assets,Expenses,Inconme,Liabilities}` 创建这些目录;
+-   documents.tmp: 用于临时存放待导入的第三方数据，比如银行卡账单，可以是其他路径，比如 `/tmp`, bean-extract, bean-file 这些脚本都要用到这个目录;
 -   importers: 用于存放自定义的导入脚本，目前自带的导入器足够使用，可以先不管这个目录;
 -   yc.import: 实际上是一个 Python 脚本，用于定义导入器的配置，后面细说;
--   yc.bean: 是实际的账簿文件，账户、交易记录都在这里，生成报表是也指定这个文件,可以将账簿文件拆分成多个小文件，再使用 `include` 指令拼接，类似 C 语言或者 Python 里的 `import`;
+-   yc.bean: 是实际的账簿文件，账户、交易记录都在这里，生成报表也使用这个文件,可以将账簿文件拆分成多个小文件，再使用 `include` 指令拼接，类似 C 语言或者 Python 里的 `import`;
 
 <details>
 <summary>
@@ -111,7 +111,7 @@ option "operating_currency" "USD"
 
 #### Assets {#assets}
 
-假设我在招商银行有两张储蓄卡，其中一张开通了朝朝盈的理财服务并且用于日常消费，另一张卡里是用于每月定额存款，积累资金用于凑购房首付，那么我会这样设置 Assets 账户(XXXX 是卡号后四位，下面同理)：
+假设我在招商银行有两张储蓄卡，其中一张开通了朝朝盈的理财服务并且用于日常消费，另一张卡用于每月定额存款，积累资金用于凑购房首付，那么我会这样设置 Assets 账户(XXXX 是卡号末四位，下面同理)：
 
 ```nil
 1970-01-01 open Assets:Bank:CMB:CardXXXX:Deposit CNY
@@ -158,8 +158,7 @@ option "operating_currency" "USD"
 1970-01-01 open Expenses:Government:IncomeTax CNY
 ```
 
--   日常消费，按照衣食行分了几大类，可以包含交通、食物、下馆子、日用杂物、买书、订阅（软件、VPS之类）以及宠物的支出。基本都在三级以内，再通过交易的 [tag](https://docs.google.com/document/d/1wAMVrKIA2qtRGmoVDSUBJGmYZSygUaR0uOMW1GV3YE0/edit#heading=h.2xx3dcvvf0r8) 标记消费的具体支出，比如食物账户里会包含早餐、日常饮用水、饮料、零食等等，可以按需使用，最终在 fava 生成的网页里可以按照 tag 过滤查看。
-
+-   日常消费，按照衣食行分了几大类，可以包含交通、食物、下馆子、日用杂物、买书、订阅（软件、VPS之类）以及宠物的支出。基本都在三级以内，再通过交易的 [tag](https://docs.google.com/document/d/1wAMVrKIA2qtRGmoVDSUBJGmYZSygUaR0uOMW1GV3YE0/edit#heading=h.2xx3dcvvf0r8) 标记消费的具体支出，比如食物相关的交易记录会打上这些 Tag：早餐、日常饮用水、饮料、零食等等，可以按需使用，最终在 fava 生成的网页里可以按照 tag 过滤查看。
 -   住的消费相对固定，并且因为是在北京租房，也是一笔不小的支出，单独开设一类账户用来管理，建议使用当前住宿房屋的简称，比如：Expenses:Lofter0817:Rent, Expenses:Lofter0817:Utility。
 
 
@@ -199,7 +198,7 @@ option "operating_currency" "USD"
   Expenses:Other
 ```
 
-2018-10-22 是银行记帐日期，"\*" 号表示交易确认无误，接着是交易描述；后两行是 metadata，可以用于过滤；接下来是交易涉及的账户，有减操作的账户，就有加操作的账户，这里 Expenses:Other 账户没有写加金额，是因为加操作只涉及这一个账户，beancount 会自行补齐数据。更详细的
+2018-10-22 是银行记帐日期，"\*" 号表示交易确认无误，接着是交易描述；后两行是 metadata，可以用于过滤；接下来是交易涉及的账户，有减操作的账户，就有加操作的账户，这里 Expenses:Other 账户没有写加金额，是因为加操作只涉及这一个账户，beancount 会自行补齐数据。更详细的可以参考 [Beancount Language Syntax](https://docs.google.com/document/d/1wAMVrKIA2qtRGmoVDSUBJGmYZSygUaR0uOMW1GV3YE0/edit#) 。
 
 每笔交易都这么手写一遍就太低效率了，还好 beancount 支持从导入第三方数据，前文提到的 `importers` 目录内就可以用来存放自定义的导入脚本，不过自带 csv 导入器就可以解决目前绝大部分需求。
 
@@ -216,7 +215,7 @@ option "operating_currency" "USD"
 
 ### 准备数据 {#准备数据}
 
-获取到 csv 各式的数据后，需要做一些检查工作：
+获取到 csv 各式的数据后，需要做一些准备工作：
 
 -   去除文件里的奇怪的符号，比如交通银行的账单里会包含 `^M` 这个符号，用 `C-c C-m` 可以在终端里敲出这个字符；
 -   金额改为只保留数字部分；
@@ -278,11 +277,11 @@ CONFIG = [
 ]
 ```
 
-csv.Col.XXX 对应的是 csv 文件的 header，新家账户账单是对应的修改就行。整体执行流程大约是，对于一个待导入文件：
+csv.Col.XXX 对应的是 csv 文件的 header，新加账户、账单的话对照修改就行。整体执行流程大约是，对于一个待导入文件：
 
-1.  每个 importer 判断自己是否会处理这个文件，如果会处理，交个这个 imoprter 处理导入，并不在往下判断；csv importer 是通过 regexps 参数里正定的正则匹配整个文件内容，看能否匹配上。
-2.  由于交行（其他银行也有可能）一卡一账单，账单的头部都一样，我在 csv header 下面插入一行 “交行0000”（0000是卡号末四位）来标记此文件是哪张卡，应该对应到哪个账户，再配置 skip\_lines 参数，在实际导入的时候跳过这一行。
-3.  last4\_map 会匹配卡号末尾，生成 `card: 交行 0000` 写到交易的 metadata 里。
+1.  每个 importer 判断自己是否会处理这个文件，如果会处理，交给这个 imoprter 处理导入，并不再往下判断；csv importer 是通过 regexps 参数里指定的正则匹配整个文件内容，看能否匹配上。
+2.  由于交行（其他银行也有可能）一卡一账单，账单的头部都一样，我在 csv header 下面插入一行 “交行0000”（0000是卡号末四位）来标记此文件是哪张卡的账单，应该对应到哪个账户，再配置 skip\_lines 参数，在实际导入的时候跳过这一行。
+3.  last4\_map 会匹配卡号末四位，生成 `card: 交行 0000` 写到交易的 metadata 里。
 
 
 ### 执行导入 {#执行导入}
@@ -306,7 +305,7 @@ bean-file yc.import ${PWD}/documents.tmp -o documents
 
 ## 我的工作流 {#我的工作流}
 
-目前我的大部分支出会落到信用卡里，少量走借记卡，极少现金。信用卡出账单日也统一到一两天之类。整体工作流程大概是这样：
+目前我的大部分支出会落到信用卡里，少量走借记卡，极少现金。信用卡出账单日也统一到一两天之内。整体工作流程大概是这样：
 
 1.  每月最后一个账单出来后，整理好账单文件，用 bean-extract 导入账单；
 2.  对 Liabilities 账户进行 balance 断言；
@@ -317,6 +316,6 @@ bean-file yc.import ${PWD}/documents.tmp -o documents
 
 ## 总结 {#总结}
 
-开始说要记账、规划自己的财务状况有半年多了，断断续续用过几款 App，都没有能完全坚持下来，直到在 wzyboy 的博客上看到 beancount 工具的安利，有如开挂一样从整体到细节都能看的清楚，也是我喜欢的纯文本工具，信息不会留在第三方、方便各种编辑、导入导出、备份。
+开始说要记账、规划自己的财务状况有半年多了，断断续续用过几款 App，都没有能完全坚持下来，直到在 wzyboy 的博客上看到 beancount 工具的安利，有如开挂一样，个人的财务状况从整体到细节都能看的清楚，也是我喜欢的纯文本工具，信息不会留在第三方、方便各种编辑、导入导出、备份。
 
 在入门上手期间，通过邮件向 [wzyboy](https://wzyboy.im/) 请教了不少疑问，都得到了细致及时的解答，表示感谢。

@@ -30,7 +30,7 @@ disqusShortname = "chis-journal"
   url = "/archive"
   weight = -9
 
-# [[menu.main]]
-#   name = "FinWeekly"
-#   url = "/issue"
-#   weight = 1
+[[menu.main]]
+  name = "FinVerse"
+  url = "/verse"
+  weight = 1
