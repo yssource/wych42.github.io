@@ -10,6 +10,8 @@ disqusShortname = "chis-journal"
   author = "chi"
   searchEngineURL = "https://www.google.com/search"
   rss = true
+  mainSections = ["posts"]
+  compactIndex = true
   sidebarHeader = ""
   sidebarText = """>> 已过的世代，无人记念；将来的世代，后来的人也不纪念。 - Ecclesiastes 1.11"""
 
