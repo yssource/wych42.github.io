@@ -2,7 +2,7 @@
 title = "beancount 简易入门指南"
 author = ["chi"]
 date = 2018-10-25T12:25:00+08:00
-lastmod = 2018-10-26T16:24:25+08:00
+lastmod = 2019-09-01T14:12:36+08:00
 tags = ["beancount", "记账"]
 categories = ["实用功"]
 draft = false
@@ -150,6 +150,8 @@ option "operating_currency" "USD"
 基本原则同上，我在 Expenses 分类下设置了如下几种账户：
 
 -   政府相关的：主要是五险一金、税之类。
+
+<!--listend-->
 
 ```nil
 1970-01-01 open Expenses:Government:Pension CNY

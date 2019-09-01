@@ -6,14 +6,11 @@ pygmentsCodeFences = true
 disqusShortname = "chis-journal"
 
 [params]
-  subtitle = "Make it Bigger!"
+  subtitle = "- Ecclesiastes 1.11"
   author = "chi"
   searchEngineURL = "https://www.google.com/search"
   rss = true
-  mainSections = ["posts"]
-  compactIndex = true
-  sidebarHeader = ""
-  sidebarText = """>> 已过的世代，无人记念；将来的世代，后来的人也不纪念。 - Ecclesiastes 1.11"""
+  mainSections = ["post"]
 
 [blackfriday]
   hrefTargetBlank = true
@@ -28,11 +25,12 @@ disqusShortname = "chis-journal"
   weight = -10
 
 [[menu.main]]
-  name = "Archive"
-  url = "/archive"
+  name = "Verse"
+  url = "/verse"
   weight = -9
 
 [[menu.main]]
-  name = "FinVerse"
-  url = "/verse"
+  name = "Archive"
+  url = "/archive"
   weight = 1
+
