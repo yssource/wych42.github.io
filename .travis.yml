@@ -1,27 +1,27 @@
-languagesetup: go
+language: go
 
 go:
-- 1.12.2 # 这里我原来填的是master，后来发现hugo不一定能跟最新的go兼容，因此这里指定某一个版本
+  - "1.2.6"
 
 install:
-- mkdir $HOME/src
-- cd $HOME/src
-- git clone https://github.com/gohugoio/hugo.git
-- cd hugo
-- go install
-- cd ${TRAVIS_BUILD_DIR}
+  - mkdir $HOME/src
+  - cd $HOME/src
+  - git clone https://github.com/gohugoio/hugo.git
+  - cd hugo
+  - go install
+  - cd ${TRAVIS_BUILD_DIR}
 
 script:
-- hugo # This commands builds your website on travis
+  - hugo # This commands builds your website on travis
 
 deploy:
-local_dir: public # Default static site output dir for Hugo
-repo: wych42/wych42.github.io # This is the slug of the repo you want to deploy your site to
-target_branch: master # GitHub pages branch to deploy to (in other cases it can be gh-pages)
-provider: pages
-skip_cleanup: true
-github_token: $GITHUB_TOKEN # This is the authentication which you will setup in the next step in travis-ci dashboard
-email: wych101010@gmail.com
-name: wych42
-on:
-branch: source
+  local_dir: public # Default static site output dir for Hugo
+  repo: wych42/wych42.github.io # This is the slug of the repo you want to deploy your site to
+  target_branch: master # GitHub pages branch to deploy to (in other cases it can be gh-pages)
+  provider: pages
+  skip_cleanup: true
+  github_token: $GITHUB_TOKEN # This is the authentication which you will setup in the next step in travis-ci dashboard
+  email: wych101010@gmail.com
+  name: wych42
+  on:
+    branch: source
