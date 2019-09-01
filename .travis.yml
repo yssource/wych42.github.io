@@ -8,6 +8,8 @@ install:
   - go install
   - cd ${TRAVIS_BUILD_DIR}
 
+cache: $HOME/src
+
 script:
   - hugo # This commands builds your website on travis
 
