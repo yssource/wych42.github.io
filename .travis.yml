@@ -1,7 +1,7 @@
 languagesetup: go
 
 go:
-- 1.12.6 # 这里我原来填的是master，后来发现hugo不一定能跟最新的go兼容，因此这里指定某一个版本
+- 1.12.2 # 这里我原来填的是master，后来发现hugo不一定能跟最新的go兼容，因此这里指定某一个版本
 
 install:
 - mkdir $HOME/src
