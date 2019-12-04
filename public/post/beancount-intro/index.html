@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  
+  <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1">
+
+  
+    
+    
+      <link href="/css/fonts.css" rel="stylesheet" type="text/css">
+    
+  
+
+  
+  <title>beancount 简易入门指南</title>
+
+  
+  
+  <link rel="stylesheet" href="/css/hugo-octopress.css">
+
+  
+  
+
+  
+    <link rel="stylesheet" href="/css/fork-awesome.min.css">
+  
+
+  
+  <link href="https://yuchi.me/favicon.png" rel="icon">
+
+  
+  
+
+  <meta name="description" content="" />
+  <meta name="keywords" content="">
+  <meta name="author" content="chi">
+
+  
+  <meta name="generator" content="Hugo 0.59.1" />
+
+  
+  
+
+  
+  
+</head>
+<body>
+
+
+<header role="banner">
+<hgroup>
+  
+  <h1><a href="https://yuchi.me/">Chi&#39;s Journal</a></h1>
+    <h2>- Ecclesiastes 1.11</h2>
+</hgroup></header>
+
+
+<nav role="navigation">
+<fieldset class="mobile-nav">
+  
+  <select onchange="location = this.value;">
+    <option value="">Navigate…</option>
+      
+        <option value="https://yuchi.me/">» Blog</option>
+      
+        <option value="https://yuchi.me/verse">» Verse</option>
+      
+        <option value="https://yuchi.me/archive">» Archive</option>
+      
+  </select>
+</fieldset>
+
+
+<ul class="main-navigation">
+  
+  
+    
+      <li><a href="https://yuchi.me/" title="Blog">Blog</a></li>
+    
+  
+    
+      <li><a href="https://yuchi.me/verse" title="Verse" >Verse</a></li>
+    
+  
+    
+      <li><a href="https://yuchi.me/archive" title="Archive" >Archive</a></li>
+    
+  
+</ul>
+
+<ul class="subscription">
+  
+    
+        <a href="https://yuchi.me/index.xml" target="_blank" type="application/rss+xml" title="RSS"><i class="fa fa-rss-square fa-lg"></i></a>
+    
+  
+</ul>
+
+
+  <form action="https://www.google.com/search" method="get" target="_blank">
+    <fieldset role="search">
+      <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+      <input type="hidden" name="q" value="site:https://yuchi.me/" />
+    </fieldset>
+  </form>
+
+</nav>
+
+
+<div id="main">
+  <div id="content">
+    <div>
+      <article class="hentry" role="article">
+
+        
+        
+
+<header>
+  <p class="meta">Oct 25, 2018
+     - 3 minute read 
+     - <a href="https://yuchi.me/post/beancount-intro/#disqus_thread">Comments</a>
+
+    
+    
+      - <a class="label" href="https://yuchi.me/categories/%e5%ae%9e%e7%94%a8%e5%8a%9f/">实用功 </a>
+    
+  </p>
+  <h1 class="entry-title">
+     beancount 简易入门指南 
+  </h1>
+</header>
+
+
+        <div class="entry-content">
+          
+          
+          
+            <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#背景知识">背景知识</a></li>
+<li><a href="#目录结构">目录结构</a></li>
+<li><a href="#开设账户">开设账户</a>
+<ul>
+<li><a href="#options">Options</a></li>
+<li><a href="#accounts">Accounts</a>
+<ul>
+<li><a href="#如何选择账户初始日期">如何选择账户初始日期？</a></li>
+<li><a href="#assets">Assets</a></li>
+<li><a href="#liabilities">Liabilities</a></li>
+<li><a href="#income">Income</a></li>
+<li><a href="#expenses">Expenses</a></li>
+<li><a href="#equity">Equity</a></li>
+</ul></li>
+<li><a href="#balance">Balance</a></li>
+</ul></li>
+<li><a href="#导入数据">导入数据</a>
+<ul>
+<li><a href="#获取数据">获取数据</a></li>
+<li><a href="#准备数据">准备数据</a></li>
+<li><a href="#import-配置">import 配置</a></li>
+<li><a href="#执行导入">执行导入</a></li>
+</ul></li>
+<li><a href="#我的工作流">我的工作流</a></li>
+<li><a href="#总结">总结</a></li>
+</ul></li>
+</ul>
+</nav>
+          
+          <p>beancount 是一个基于文本、命令行的复式记账软件，上周看到了 <a href="https://wzyboy.im/post/1063.html" target="_blank">wzyboy</a> 介绍这个工具以及复式记账的基础概念的安利文。花了一点时间入坑之后，自己的资产（存款）、收入、消费去向，一目了然。看到食物消费和打车话费在支出的 TreeMap 里占据的两大块，不禁让我反思起平时的好吃懒做。</p>
+
+<p>如果你跟我类似：</p>
+
+<ul>
+<li>靠月工资流水生存，有强烈的意愿、需求理清自己的财务状态，搞清楚钱从哪里来、花到哪里去、留下了多少，并借机改善；<br /></li>
+<li>虽然平时也用过鲨鱼记账、随手记之类的 App，但是觉得每一次消费后掏出手机、打开 App、填写金额时间用途，是一个很重的中断行为；也懒得定期手工录入一批账单；<br /></li>
+<li>绝大多数消费最终都由银行账户结算，例如通过支付宝绑定信用卡快捷支付，最终只需要统计银行账单即可；<br /></li>
+<li>懂一点编程（简单的 Python 基础即可），愿意付出一点时间学习；<br />
+<br /></li>
+</ul>
+
+<p>那么，beancount 这个工具会是一个比较合适的开始。</p>
+
+<p>本文将从一个新手了解了基础概念之后，如何迈出第一步，把现存的财务状态映射到 beancount 里的角度，介绍一下个人的实践经验。</p>
+
+<h2 id="背景知识">背景知识</h2>
+
+<p>后文假设读者已经读过下列文档、或者熟悉下面文档中提及的工具和概念。</p>
+
+<ul>
+<li><a href="https://wzyboy.im/post/1063.html" target="_blank">Beancount —— 命令行复式簿记</a> wzyboy 的安利文，中文文档<br />
+<br /></li>
+</ul>
+
+<p>如果有时间，推荐再读一下 beancount 作者写的几篇文档：</p>
+
+<ul>
+<li><a href="https://docs.google.com/document/d/100tGcA4blh6KSXPRGCZpUlyxaRUwFHEvnz%5Fk9DyZFn4/edit" target="_blank">Beancount - The Double-Entry Counting Method</a><br /></li>
+<li><a href="https://docs.google.com/document/d/1G-gsmwK551lSyuHboVLW3xbLhh99JfoKIbNnZSJxteE/edit" target="_blank">Beancount - Tutorial &amp; Example</a><br />
+<br /></li>
+</ul>
+
+<p>还有更多的细节、示例可以参考这个索引<a href="https://docs.google.com/document/d/1RaondTJCS%5FIUPBHFNdT8oqFKJjVJDsfsn6JEjBG04eA/edit" target="_blank">文档</a>。</p>
+
+<h2 id="目录结构">目录结构</h2>
+
+<p>使用如下所示的目录结构：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">~/Documents/accounting
+├── documents
+│   ├── Assets/
+│   ├── Expenses/
+│   ├── Income/
+│   └── Liabilities/
+├── documents.tmp/
+├── importers
+│   ├── __init__.py
+├── yc.bean
+└── yc.import</code></pre></div>
+<ul>
+<li>~/Documents/accounting: 项目的根目录，放在任何想放的地方;<br /></li>
+<li>documents: 用于导入第三方数据后，使用 bean-file 归类存档原文件，执行 <code>mkdir documents/{Assets,Expenses,Inconme,Liabilities}</code> 创建这些目录;<br /></li>
+<li>documents.tmp: 用于临时存放待导入的第三方数据，比如银行卡账单，可以是其他路径，比如 <code>/tmp</code>, bean-extract, bean-file 这些脚本都要用到这个目录;<br /></li>
+<li>importers: 用于存放自定义的导入脚本，目前自带的导入器足够使用，可以先不管这个目录;<br /></li>
+<li>yc.import: 实际上是一个 Python 脚本，用于定义导入器的配置，后面细说;<br /></li>
+<li>yc.bean: 是实际的账簿文件，账户、交易记录都在这里，生成报表也使用这个文件,可以将账簿文件拆分成多个小文件，再使用 <code>include</code> 指令拼接，类似 C 语言或者 Python 里的 <code>import</code>;<br />
+<br /></li>
+</ul>
+
+<p><details><br />
+<summary><br />
+单文件账簿还是拆分多文件账簿？<br />
+</summary><br />
+<p class="details"></p>
+
+<ul>
+<li>刚开始建议用一个 <code>.bean</code> 文件管理所有的记录，熟悉工具的使用流程、有了明确的需求之后再拆分;<br /></li>
+<li>如果使用 emacs 的 orgmode 编辑账簿文件，建议一直使用一个 <code>.bean</code> 文件，非常好用;<br />
+</p><br />
+</details><br />
+<br /></li>
+</ul>
+
+<p>刚开始使用，只需要关注主账簿文件 <code>yc.bean</code> 就行，我们来一探究竟吧。</p>
+
+<h2 id="开设账户">开设账户</h2>
+
+<p>我的 <code>yc.bean</code> 文件顶层有三部分: Options, Accounts, MonthlyReconciliation，分别对应账簿文件的选项，账户，每月对账。</p>
+
+<h3 id="options">Options</h3>
+
+<p>设置账簿的 title，定义账簿里会用到的货币。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">\* Options
+option &#34;title&#34; &#34;My Personal Ledger&#34;
+option &#34;operating_currency&#34; &#34;CNY&#34;
+option &#34;operating_currency&#34; &#34;USD&#34;</code></pre></div>
+<h3 id="accounts">Accounts</h3>
+
+<p>有五种账户类型: Assets,Liabilities,Equity,Income,Expenses。分别对应资产、负债、初始化账簿时已有的数据、收入、支出，详细含义可以看上面提及的推荐阅读文档里。</p>
+
+<p>在 benacount 里会隐式创建树形账户，也就是如果开了一个账户叫做： <code>Assets:Bank:BoC:CardXXXX</code>, 那么会自动生成账户 <code>Assets:Bank:BoC</code>, <code>Assets:Bank</code>, <code>Assets</code> 。我的做法是原则上用现实世界里的最细分的账户映射 beancount 里的账户，结合账户的实际用途设置账户名。</p>
+
+<h4 id="如何选择账户初始日期">如何选择账户初始日期？</h4>
+
+<p>偷懒的话可以选择 1970-01-01。</p>
+
+<p>我的做法是：Assets 类账户选择我开始使用 beancount 的日期，Liabilities、Expenses 账户用生日，Income 选择当前这份工作的日期。</p>
+
+<h4 id="assets">Assets</h4>
+
+<p>假设我在招商银行有两张储蓄卡，其中一张开通了朝朝盈的理财服务并且用于日常消费，另一张卡用于每月定额存款，积累资金用于凑购房首付，那么我会这样设置 Assets 账户(XXXX 是卡号末四位，下面同理)：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">1970-01-01 open Assets:Bank:CMB:CardXXXX:Deposit CNY
+1970-01-01 open Assets:Bank:CMB:CardXXXX:ZZY CNY</code></pre></div>
+<p>对于存款卡，因为只用于特定用途，不会挪作他用，还有别的账户里也有存款用于同样的用途，比如政府的住房公积金，那么我这样设置账户：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">1970-01-01 open Assets:Saving:HouseFund:Bank:CMB:CardXXXX:Deposit CNY
+1970-01-01 open Assets:Saving:HouseFund:Goverment CNY</code></pre></div>
+<h4 id="liabilities">Liabilities</h4>
+
+<p>假设我在招商银行有一张银联信用卡，一张 Visa 信用卡；在交通银行有一张银联信用卡，一张 Vsia 信用卡。由于招商银行共享额度、合并账单、征信内只有一个账户；交通银行虽然也共享额度，但是拆分账单，每个账单要单独还款，并且在征信系统内一卡一账户，我这样设置账户：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">1970-01-01 open Liabilities:CreditCards:CMB CNY
+1970-01-01 open Liabilities:Creditcards:COMM:CardVisaXXXX CNY
+1970-01-01 open Liabilities:Creditcards:COMM:CardUnionXXXX CNY</code></pre></div>
+<p>这样既可以既可以对单个账户断言 balance，也可以对单个银行对断言 balance。</p>
+
+<h4 id="income">Income</h4>
+
+<p>工资收入可以设置账户 Income:CompanyName:Salary 就行, 如果有饭补、报销之类的，可以单写 Income:CompanyName:FoodSubsidy, Income:CompanyName:Reimbursement.<br />
+这里用 event 指令，可以记录下哪天加入公司，比如 <code>2018-01-01 event &quot;入职 XX&quot;</code> 。</p>
+
+<h4 id="expenses">Expenses</h4>
+
+<p>基本原则同上，我在 Expenses 分类下设置了如下几种账户：</p>
+
+<ul>
+<li>政府相关的：主要是五险一金、税之类。<br />
+<br /></li>
+</ul>
+
+<!--listend-->
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">1970-01-01 open Expenses:Government:Pension CNY
+1970-01-01 open Expenses:Government:Unemployment CNY
+1970-01-01 open Expenses:Government:MedicalCare CNY
+1970-01-01 open Expenses:Government:IncomeTax CNY</code></pre></div>
+<ul>
+<li>日常消费，按照衣食行分了几大类，可以包含交通、食物、下馆子、日用杂物、买书、订阅（软件、VPS之类）以及宠物的支出。基本都在三级以内，再通过交易的 <a href="https://docs.google.com/document/d/1wAMVrKIA2qtRGmoVDSUBJGmYZSygUaR0uOMW1GV3YE0/edit#heading=h.2xx3dcvvf0r8" target="_blank">tag</a> 标记消费的具体支出，比如食物相关的交易记录会打上这些 Tag：早餐、日常饮用水、饮料、零食等等，可以按需使用，最终在 fava 生成的网页里可以按照 tag 过滤查看。<br /></li>
+<li>住的消费相对固定，并且因为是在北京租房，也是一笔不小的支出，单独开设一类账户用来管理，建议使用当前住宿房屋的简称，比如：Expenses:Lofter0817:Rent, Expenses:Lofter0817:Utility。<br />
+<br />
+<br /></li>
+</ul>
+
+<h4 id="equity">Equity</h4>
+
+<p>目前我只设置了一个 Equity 账户 Equity:Opening-Balances，用来平衡初始资产、负债账户时的会计恒等式。也就是，我想往一个银行卡账户里添加 1000 元，并且想保持平衡，那么需要从某个账户减 1000 元，在初始化时，这个账户就是 Equity:Opening-Balances。一个示例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">1970-01-01 open Assets:Bank:CMB:CardXXXX CNY
+1991-05-21 pad Assets:Bank:CMB:C6698 Equity:Opening-Balances
+2018-10-17 balance Assets:Bank:CMB:C6698 11912.77 CNY</code></pre></div>
+<h3 id="balance">Balance</h3>
+
+<p>设置了账户之后，要把对应的现实账户的状态反应出来，需要用 <code>balance</code> 指令进行断言操作，用 <code>pad</code> 指令进行辅助。比如在设置账户的当时，银行卡内有存款 1000 元，可以在 <code>open</code> 账户那行之后添加变成下面的结构，注意 beancount 默认交易都在一天的开始发生，所以 balance 断言要写在第二天，表示截止到第二天零点的情况。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">1970-01-01 open Assets:Bank:CMB:Card0817
+1970-01-01 pad Assets:Bank:CMB:Card0817 Equity:Opening-Balances
+1970-01-02 balance Assets:Bank:CMB:Card0817 1000 CNY</code></pre></div>
+<p>其他账户依照此方法设置即可。</p>
+
+<h2 id="导入数据">导入数据</h2>
+
+<p>除了账户和 balance 断言， <code>.bean</code> 文件里大部分内容是一笔笔交易记录，一个笔交易在 beancount 里一般长这样：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">2018-10-22 * &#34;描述&#34;
+  card: &#34;CardXXXX&#34;
+  date: 2018-10-21
+  Liabilities:CreditCards:CMB  -1921.00 CNY
+  Expenses:Other</code></pre></div>
+<p>2018-10-22 是银行记帐日期，&raquo;*&raquo; 号表示交易确认无误，接着是交易描述；后两行是 metadata，可以用于过滤；接下来是交易涉及的账户，有减操作的账户，就有加操作的账户，这里 Expenses:Other 账户没有写加金额，是因为加操作只涉及这一个账户，beancount 会自行补齐数据。更详细的可以参考 <a href="https://docs.google.com/document/d/1wAMVrKIA2qtRGmoVDSUBJGmYZSygUaR0uOMW1GV3YE0/edit#" target="_blank">Beancount Language Syntax</a> 。</p>
+
+<p>每笔交易都这么手写一遍就太低效率了，还好 beancount 支持从导入第三方数据，前文提到的 <code>importers</code> 目录内就可以用来存放自定义的导入脚本，不过自带 csv 导入器就可以解决目前绝大部分需求。</p>
+
+<h3 id="获取数据">获取数据</h3>
+
+<p>目前国内部分银行提供 csv 各式的对账单，比如招商银行可以登录个人网银后找到对账单下载；也有银行不提供 csv、Excel 各式的对账单下载，可以尝试下面两个方法：</p>
+
+<ul>
+<li>如果银行提供网页版对账单，并且账单页面内容是 html table，可以使用 Chrome 插件<a href="https://chrome.google.com/webstore/detail/table-capture/iebpjdmgckacbodjpijphcplhebcmeop" target="_blank"> Table-Capture</a> 把页面里的 table 导出到 Google Spreadsheet，再导出为 csv;<br /></li>
+<li>银行应该都会提供 pdf 各式的对账单，可以尝试用 <a href="https://tabula.technology/" target="_blank">Tabula</a> 这个工具，从 pdf 文件里解析账单表格并导出;<br />
+<br /></li>
+</ul>
+
+<p>经过测试，以上两个方法能够搞定招商、交通、中信、浦发这四个银行账单。</p>
+
+<h3 id="准备数据">准备数据</h3>
+
+<p>获取到 csv 各式的数据后，需要做一些准备工作：</p>
+
+<ul>
+<li>去除文件里的奇怪的符号，比如交通银行的账单里会包含 <code>^M</code> 这个符号，用 <code>C-c C-m</code> 可以在终端里敲出这个字符；<br /></li>
+<li>金额改为只保留数字部分；<br /></li>
+<li>把文件编码转换为 utf-8: <code>iconv -f gbk -t UTF-8 file &gt; file.utf-8</code> ；<br /></li>
+<li>转换文件的换行方式: <code>dos2unix file.utf-8</code> ；<br />
+<br />
+<br /></li>
+</ul>
+
+<h3 id="import-配置">import 配置</h3>
+
+<p>我的 import 配置文件 <code>yc.imoprt</code> 抹去敏感信息之后示例如下下方的代码。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e">#!/usr/bin/env python</span>
+
+<span style="color:#f92672">import</span> os
+<span style="color:#f92672">import</span> sys
+
+<span style="color:#f92672">import</span> beancount.ingest.extract
+<span style="color:#f92672">from</span> beancount.ingest.importers <span style="color:#f92672">import</span> csv
+
+beancount<span style="color:#f92672">.</span>ingest<span style="color:#f92672">.</span>extract<span style="color:#f92672">.</span>HEADER <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+
+CONFIG <span style="color:#f92672">=</span> [
+    <span style="color:#75715e"># CMB Credit</span>
+    csv<span style="color:#f92672">.</span>Importer(
+        {
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>DATE: <span style="color:#e6db74">&#39;记账日期&#39;</span>,
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>TXN_DATE: <span style="color:#e6db74">&#39;交易日期&#39;</span>,
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>NARRATION1: <span style="color:#e6db74">&#39;交易摘要&#39;</span>,
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>AMOUNT_DEBIT: <span style="color:#e6db74">&#39;人民币金额&#39;</span>,
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>LAST4: <span style="color:#e6db74">&#39;卡号后四位&#39;</span>
+        },
+        account<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Liabilities:CreditCards:CMB&#39;</span>,
+        currency<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;CNY&#39;</span>,
+        regexps<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">对账标志&#39;</span>,
+        last4_map<span style="color:#f92672">=</span>{
+            <span style="color:#e6db74">&#34;0000&#34;</span>: <span style="color:#e6db74">&#34;招行 0000&#34;</span>,
+        },
+        <span style="color:#75715e"># categorizer=guess.guess2</span>
+    ),
+    <span style="color:#75715e"># COMM Credit 0000</span>
+    csv<span style="color:#f92672">.</span>Importer(
+        {
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>DATE: <span style="color:#e6db74">&#39;记账日期&#39;</span>,
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>TXN_DATE: <span style="color:#e6db74">&#39;交易日期&#39;</span>,
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>NARRATION1: <span style="color:#e6db74">&#39;交易说明&#39;</span>,
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>AMOUNT_DEBIT: <span style="color:#e6db74">&#39;清算币种/金额&#39;</span>,
+            csv<span style="color:#f92672">.</span>Col<span style="color:#f92672">.</span>LAST4: <span style="color:#e6db74">&#39;卡号末四位&#39;</span>
+        },
+        account<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Liabilities:CreditCards:COMM:C0000&#39;</span>,
+        currency<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;CNY&#39;</span>,
+        regexps<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;交行0000&#39;</span>,
+        skip_lines<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,
+        last4_map<span style="color:#f92672">=</span>{
+            <span style="color:#e6db74">&#34;0000&#34;</span>: <span style="color:#e6db74">&#34;交行 0000&#34;</span>,
+        },
+        <span style="color:#75715e"># categorizer=guess.guess2]</span>
+    )
+]</code></pre></div>
+<p>csv.Col.XXX 对应的是 csv 文件的 header，新加账户、账单的话对照修改就行。整体执行流程大约是，对于一个待导入文件：</p>
+
+<ol>
+<li>每个 importer 判断自己是否会处理这个文件，如果会处理，交给这个 imoprter 处理导入，并不再往下判断；csv importer 是通过 regexps 参数里指定的正则匹配整个文件内容，看能否匹配上。<br /></li>
+<li>由于交行（其他银行也有可能）一卡一账单，账单的头部都一样，我在 csv header 下面插入一行 “交行0000”（0000是卡号末四位）来标记此文件是哪张卡的账单，应该对应到哪个账户，再配置 skip_lines 参数，在实际导入的时候跳过这一行。<br /></li>
+<li>last4_map 会匹配卡号末四位，生成 <code>card: 交行 0000</code> 写到交易的 metadata 里。<br />
+<br />
+<br /></li>
+</ol>
+
+<h3 id="执行导入">执行导入</h3>
+
+<p>把准备好的账单文件放到上面提及的 documents.tmp 目录里，再执行:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">bean-extract yc.import <span style="color:#e6db74">${</span>PWD<span style="color:#e6db74">}</span>/documents.tmp &gt; tmp.bean</code></pre></div>
+<p>我习惯先把记录先导出到临时账簿文件里，检查一下交易记录、修正一部分交易描述、添加 Expenses 账户，再导出到总账簿文件里。</p>
+
+<p>添加 Expenses 账户这一步可以尝试自定义 categorizer 来实现自动化，比如交易描述里包含“饿了么”自动归到 Expenses:Food 账户里。我还没有实现这部分，可以参考这个 <a href="https://bitbucket.org/blais/beancount/pull-requests/24/improve-ingestimporterscsv/diff" target="_blank">Pull Request</a>。</p>
+
+<p>导入完成后，再执行下面的命令，把原文件归档到 documents 目录里。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nil" data-lang="nil">bean-file yc.import ${PWD}/documents.tmp -o documents</code></pre></div>
+<h2 id="我的工作流">我的工作流</h2>
+
+<p>目前我的大部分支出会落到信用卡里，少量走借记卡，极少现金。信用卡出账单日也统一到一两天之内。整体工作流程大概是这样：</p>
+
+<ol>
+<li>每月最后一个账单出来后，整理好账单文件，用 bean-extract 导入账单；<br /></li>
+<li>对 Liabilities 账户进行 balance 断言；<br /></li>
+<li>在还款日前还款后，对 Assets 账户断言；<br /></li>
+<li>发薪日再次对各类账户进行一次断言；<br /></li>
+<li>每月检查个账户的错误情况，fava 生成的网页上有一个 Errors 子页面；回顾支出情况；<br />
+<br />
+<br /></li>
+</ol>
+
+<h2 id="总结">总结</h2>
+
+<p>开始说要记账、规划自己的财务状况有半年多了，断断续续用过几款 App，都没有能完全坚持下来，直到在 wzyboy 的博客上看到 beancount 工具的安利，有如开挂一样，个人的财务状况从整体到细节都能看的清楚，也是我喜欢的纯文本工具，信息不会留在第三方、方便各种编辑、导入导出、备份。</p>
+
+<p>在入门上手期间，通过邮件向 <a href="https://wzyboy.im/" target="_blank">wzyboy</a> 请教了不少疑问，都得到了细致及时的解答，表示感谢。</p>
+        </div>
+        
+
+<footer>
+  <p class="meta">
+    <span class="byline author vcard">Posted by <span class="fn">chi</span></span>
+    
+    <time>Oct 25, 2018</time>
+    
+      <span class="categories">
+        Tags:
+        
+          <a class="category" href="https://yuchi.me/tags/beancount">beancount</a>  <a class="category" href="https://yuchi.me/tags/%e8%ae%b0%e8%b4%a6">记账</a>  
+    
+    </span>
+  </p>
+
+  
+
+  <p class="meta">
+    
+        <a class="basic-alignment left" href="https://yuchi.me/post/wechat-punch/" title="企业微信远程打卡">企业微信远程打卡</a>
+    
+
+    
+  </p>
+  
+    
+      <div id="disqus_thread"></div>
+<script type="text/javascript">
+  (function() {
+      
+      
+      
+      if (window.location.hostname == "localhost")
+          return;
+
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'chis-journal';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+    
+  
+</footer>
+
+      </article>
+    </div>
+    
+
+<aside class="sidebar thirds">
+  <section class="first odd">
+
+    
+
+    <p>
+      
+    </p>
+  </section>
+
+
+
+  
+  <ul class="sidebar-nav">
+    <li class="sidebar-nav-item">
+      
+      
+      
+      
+      
+         
+      
+      
+      
+      
+      
+      
+      
+      
+
+    
+    
+    </li>
+  </ul>
+
+  
+
+  
+
+  
+  
+  
+</aside>
+
+  </div>
+</div>
+
+<footer role="contentinfo">
+    <p>Copyright &copy; 2019 chi - <a
+            href="https://yuchi.me/license/">License</a> -
+        <span class="credit">Written with <a target="_blank" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a
+                target="_blank" href="https://orgmode.org/">Org
+                Mode</a>. Rendered by <a target="_blank" href="https://gohugo.io">Hugo</a> and <a target="_blank"
+                href="https://github.com/parsiya/hugo-octopress/">Hugo-Octopress</a> theme.
+    </p>
+</footer>
+
+
+
+
+
+
+</body>
+
+</html>

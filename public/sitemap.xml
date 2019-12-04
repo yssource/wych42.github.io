@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <url>
+    <loc>https://yuchi.me/</loc>
+    <lastmod>2019-12-04T11:47:31+08:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/categories/</loc>
+    <lastmod>2019-12-04T11:47:31+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/tags/kubernetes/</loc>
+    <lastmod>2019-12-04T11:47:31+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/tags/</loc>
+    <lastmod>2019-12-04T11:47:31+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/verse/</loc>
+    <lastmod>2019-12-04T11:47:31+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/categories/%E7%83%82%E7%AC%94%E5%A4%B4/</loc>
+    <lastmod>2019-12-04T11:47:31+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/verse/deploy-kubernetes-with-kubeadm/</loc>
+    <lastmod>2019-12-04T11:47:31+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/tags/golang/</loc>
+    <lastmod>2019-09-01T14:26:00+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/verse/golang-byte-vs-string/</loc>
+    <lastmod>2019-09-01T14:26:00+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/categories/program/</loc>
+    <lastmod>2019-09-01T14:26:00+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/archive/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/post/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/tags/beancount/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/post/beancount-intro/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/categories/%E5%AE%9E%E7%94%A8%E5%8A%9F/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/tags/%E8%AE%B0%E8%B4%A6/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/issue/</loc>
+    <lastmod>2018-05-09T16:46:55+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/issue/0000/</loc>
+    <lastmod>2018-05-09T16:46:55+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/tags/wechat/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/tags/work/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/post/wechat-punch/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/categories/%E6%97%A0%E7%94%A8%E5%8A%9F/</loc>
+    <lastmod>2019-09-01T14:12:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://yuchi.me/license/</loc>
+  </url>
+  
+</urlset>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>program on Chi&#39;s Journal</title>
+    <link>https://yuchi.me/categories/program/</link>
+    <description>Recent content in program on Chi&#39;s Journal</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Sun, 01 Sep 2019 14:19:00 +0800</lastBuildDate>
+    
+	<atom:link href="https://yuchi.me/categories/program/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>golang []byte vs string</title>
+      <link>https://yuchi.me/verse/golang-byte-vs-string/</link>
+      <pubDate>Sun, 01 Sep 2019 14:19:00 +0800</pubDate>
+      
+      <guid>https://yuchi.me/verse/golang-byte-vs-string/</guid>
+      <description>区别  []byte 是 slice，可以修改
+ string 是 read-only []byte
+   Strings are immutable: once created, it is impossible to change the contents of a string.&amp;nbsp;1
+  []byte 底层有 data, size, capacity, string 没有 capacity
+  string immutable 的含义指的是：
+ 一个 string 所在的内存区域内容是不改变的，比如 &amp;laquo;hello&amp;raquo;
+ 多个 string 可以共享（slice）同一个内存地址，比如 &amp;laquo;el&amp;raquo;
+ 原 string 变量（内存地址）被重新赋值之后，共享的变量们的值不会改变
+    package main import &amp;#34;fmt&amp;#34; func main() { a := &amp;#34;hello&amp;#34; b := a[0:2] fmt.</description>
+    </item>
+    
+  </channel>
+</rss>

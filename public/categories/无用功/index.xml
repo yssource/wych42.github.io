@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>无用功 on Chi&#39;s Journal</title>
+    <link>https://yuchi.me/categories/%E6%97%A0%E7%94%A8%E5%8A%9F/</link>
+    <description>Recent content in 无用功 on Chi&#39;s Journal</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Mon, 23 Apr 2018 13:41:00 +0800</lastBuildDate>
+    
+	<atom:link href="https://yuchi.me/categories/%E6%97%A0%E7%94%A8%E5%8A%9F/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>企业微信远程打卡</title>
+      <link>https://yuchi.me/post/wechat-punch/</link>
+      <pubDate>Mon, 23 Apr 2018 13:41:00 +0800</pubDate>
+      
+      <guid>https://yuchi.me/post/wechat-punch/</guid>
+      <description>&lt;p&gt;一种简单绕过定位打卡的方法。&lt;/p&gt;</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Verses on Chi&#39;s Journal</title>
+    <link>https://yuchi.me/verse/</link>
+    <description>Recent content in Verses on Chi&#39;s Journal</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Wed, 04 Dec 2019 11:34:00 +0800</lastBuildDate>
+    
+	<atom:link href="https://yuchi.me/verse/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>用 kubeadm 部署简易 kubernetes 集群</title>
+      <link>https://yuchi.me/verse/deploy-kubernetes-with-kubeadm/</link>
+      <pubDate>Wed, 04 Dec 2019 11:34:00 +0800</pubDate>
+      
+      <guid>https://yuchi.me/verse/deploy-kubernetes-with-kubeadm/</guid>
+      <description>准备  这次部署能用到的设备都是小型号得 vps，零散在不同得公网区域，所以要部署一个跨公网集群。
+ 各项配置都使用最简化得模式，比如单主节点，主要目的是自用+测试。
+ 通读和参考文档： Bootstrapping clusters with kubeadm。
+  设备和网络 三台设备：
+ 控制节点（同时也当做worker用）: 赵云, 2 Core, 4G(x1)
+ worker: 赵云，1 Core, 1G(x2)
+ 操作系统: debian 9
+  网络：三台设备在三个地区，各有公网，内网不通。
+安装依赖 安装 docker apt-get install -y \  apt-transport-https \  ca-certificates \  curl \  gnupg2 \  software-properties-common curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add - add-apt-repository \  &amp;#34;deb [arch=amd64] https://download.docker.com/linux/debian \ $(lsb_release -cs)\ stable&amp;#34; apt-get update &amp;amp;&amp;amp; apt-get install -y docker-ce docker-ce-cli containerd.</description>
+    </item>
+    
+    <item>
+      <title>golang []byte vs string</title>
+      <link>https://yuchi.me/verse/golang-byte-vs-string/</link>
+      <pubDate>Sun, 01 Sep 2019 14:19:00 +0800</pubDate>
+      
+      <guid>https://yuchi.me/verse/golang-byte-vs-string/</guid>
+      <description>区别  []byte 是 slice，可以修改
+ string 是 read-only []byte
+   Strings are immutable: once created, it is impossible to change the contents of a string.&amp;nbsp;1
+  []byte 底层有 data, size, capacity, string 没有 capacity
+  string immutable 的含义指的是：
+ 一个 string 所在的内存区域内容是不改变的，比如 &amp;laquo;hello&amp;raquo;
+ 多个 string 可以共享（slice）同一个内存地址，比如 &amp;laquo;el&amp;raquo;
+ 原 string 变量（内存地址）被重新赋值之后，共享的变量们的值不会改变
+    package main import &amp;#34;fmt&amp;#34; func main() { a := &amp;#34;hello&amp;#34; b := a[0:2] fmt.</description>
+    </item>
+    
+  </channel>
+</rss>
