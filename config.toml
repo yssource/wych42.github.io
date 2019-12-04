@@ -11,11 +11,14 @@ disqusShortname = "chis-journal"
   searchEngineURL = "https://www.google.com/search"
   rss = true
   mainSections = ["post"]
+  pygmentscodefences = true
+  pygmentsStyle = "solarized-dark"
+
 
 [blackfriday]
   hrefTargetBlank = true
   angledQuotes = true
-  fractions = true
+  fractions = false
   plainIDAnchors = true
   extensions = ["hardLineBreak"]
 

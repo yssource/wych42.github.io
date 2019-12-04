@@ -2,7 +2,7 @@
 title = "beancount 简易入门指南"
 author = ["chi"]
 date = 2018-10-25T12:25:00+08:00
-lastmod = 2019-09-01T14:12:36+08:00
+lastmod = 2019-12-04T18:54:57+08:00
 tags = ["beancount", "记账"]
 categories = ["实用功"]
 draft = false

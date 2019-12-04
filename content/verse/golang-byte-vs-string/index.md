@@ -1,11 +1,11 @@
 +++
 title = "golang []byte vs string"
 author = ["chi"]
-date = 2019-09-01T14:19:00+08:00
-lastmod = 2019-09-01T14:26:00+08:00
+date = 2019-09-01T14:17:00+08:00
+lastmod = 2019-12-04T18:54:57+08:00
 tags = ["golang"]
-categories = ["program"]
-draft = false
+categories = ["烂笔头"]
+draft = true
 toc = true
 +++
 
