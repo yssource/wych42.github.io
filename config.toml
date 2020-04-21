@@ -23,7 +23,7 @@ disqusShortname = "chis-journal"
   searchEngineURL = "https://www.google.com/search"
   rss = true
   mainSections = ["post"]
-  googleAnalytics = "UA-164155675-1
+  googleAnalytics = "UA-164155675-1"
 
 [blackfriday]
   hrefTargetBlank = true
