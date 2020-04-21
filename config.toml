@@ -1,12 +1,11 @@
 baseURL = "https://yuchi.me/"
-languageCode = "en"
 footnoteReturnLinkContents = "↩"
 title = "Chi's Journal"
 theme = "beautifulhugo"
 hasCJKLanguage = true
+languageCode = "zh-cn"
+DefaultContentLanguage = "zh-cn"
 
-
-DefaultContentLanguage = "en"
 [languages]
   [languages.zh-CN]
     weight = 2
