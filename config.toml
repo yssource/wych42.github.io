@@ -9,9 +9,11 @@ DefaultContentLanguage = "zh-cn"
 [languages]
   [languages.zh-CN]
     weight = 2
+    languageName = "简体中文"
     contentDir = "content/cn"
   [languages.en]
     weight = 1
+    languageName = "English"
     contentDir = "content/en"
 
 [params]
