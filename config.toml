@@ -23,9 +23,7 @@ disqusShortname = "chis-journal"
   searchEngineURL = "https://www.google.com/search"
   rss = true
   mainSections = ["post"]
-  pygmentscodefences = true
-  pygmentsStyle = "solarized-dark"
-
+  googleAnalytics = "UA-164155675-1
 
 [blackfriday]
   hrefTargetBlank = true
