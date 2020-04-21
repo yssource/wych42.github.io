@@ -2,18 +2,16 @@
 title = "Export Org-mode in Chinese to PDF with custom latex class"
 author = ["chi"]
 date = 2020-04-20T18:50:00+08:00
-lastmod = 2020-04-20T18:57:14+08:00
+lastmod = 2020-04-21T16:03:45+08:00
 tags = ["emacs", "latex", "pdf"]
-categories = ["实用功"]
+categories = ["Post"]
 draft = false
 toc = true
 +++
 
-因为疫情需要准备些远程面试题，在 Org-mode 里写好了之后想导出 PDF，先导出为 markdown，再用 pandoc 转为 PDF 搞定，然而还是想一步到位，节省时间。
-
 目前在用的 emacs 配置基于 [redguardtoo/emacs.d](https://github.com/redguardtoo/emacs.d) 修改而来。
 
-配置的默认特性有：
+配置的默认功能有：
 
 -   使用 [ElegantLaTeX/ElegantPaper](https://github.com/ElegantLaTeX/ElegantPaper) 作为默认的导出模板;
 -   使用 [gpoore/minted](https://github.com/gpoore/minted) 进行代码高亮;

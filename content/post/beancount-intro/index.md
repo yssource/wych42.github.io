@@ -2,9 +2,9 @@
 title = "beancount 简易入门指南"
 author = ["chi"]
 date = 2018-10-25T12:25:00+08:00
-lastmod = 2019-12-04T18:54:57+08:00
+lastmod = 2020-04-21T16:03:45+08:00
 tags = ["beancount", "记账"]
-categories = ["实用功"]
+categories = ["Post"]
 draft = false
 toc = true
 +++
@@ -33,17 +33,17 @@ beancount 是一个基于文本、命令行的复式记账软件，上周看到�
 
 如果有时间，推荐再读一下 beancount 作者写的几篇文档：
 
--   [Beancount - The Double-Entry Counting Method](https://docs.google.com/document/d/100tGcA4blh6KSXPRGCZpUlyxaRUwFHEvnz%5Fk9DyZFn4/edit)
+-   [Beancount - The Double-Entry Counting Method](https://docs.google.com/document/d/100tGcA4blh6KSXPRGCZpUlyxaRUwFHEvnz_k9DyZFn4/edit)
 -   [Beancount - Tutorial & Example](https://docs.google.com/document/d/1G-gsmwK551lSyuHboVLW3xbLhh99JfoKIbNnZSJxteE/edit)
 
-还有更多的细节、示例可以参考这个索引[文档](https://docs.google.com/document/d/1RaondTJCS%5FIUPBHFNdT8oqFKJjVJDsfsn6JEjBG04eA/edit)。
+还有更多的细节、示例可以参考这个索引[文档](https://docs.google.com/document/d/1RaondTJCS_IUPBHFNdT8oqFKJjVJDsfsn6JEjBG04eA/edit)。
 
 
 ## 目录结构 {#目录结构}
 
 使用如下所示的目录结构：
 
-```plaintext
+```nil
 ~/Documents/accounting
 ├── documents
 │   ├── Assets/
@@ -64,15 +64,11 @@ beancount 是一个基于文本、命令行的复式记账软件，上周看到�
 -   yc.import: 实际上是一个 Python 脚本，用于定义导入器的配置，后面细说;
 -   yc.bean: 是实际的账簿文件，账户、交易记录都在这里，生成报表也使用这个文件,可以将账簿文件拆分成多个小文件，再使用 `include` 指令拼接，类似 C 语言或者 Python 里的 `import`;
 
-<details>
-<summary>
-单文件账簿还是拆分多文件账簿？
+<details><summary>单文件账簿还是拆分多文件账簿？
 </summary>
-<p class="details">
 
 -   刚开始建议用一个 `.bean` 文件管理所有的记录，熟悉工具的使用流程、有了明确的需求之后再拆分;
 -   如果使用 emacs 的 orgmode 编辑账簿文件，建议一直使用一个 `.bean` 文件，非常好用;
-</p>
 </details>
 
 刚开始使用，只需要关注主账簿文件 `yc.bean` 就行，我们来一探究竟吧。
@@ -87,7 +83,7 @@ beancount 是一个基于文本、命令行的复式记账软件，上周看到�
 
 设置账簿的 title，定义账簿里会用到的货币。
 
-```plaintext
+```nil
 \* Options
 option "title" "My Personal Ledger"
 option "operating_currency" "CNY"
@@ -113,14 +109,14 @@ option "operating_currency" "USD"
 
 假设我在招商银行有两张储蓄卡，其中一张开通了朝朝盈的理财服务并且用于日常消费，另一张卡用于每月定额存款，积累资金用于凑购房首付，那么我会这样设置 Assets 账户(XXXX 是卡号末四位，下面同理)：
 
-```plaintext
+```nil
 1970-01-01 open Assets:Bank:CMB:CardXXXX:Deposit CNY
 1970-01-01 open Assets:Bank:CMB:CardXXXX:ZZY CNY
 ```
 
 对于存款卡，因为只用于特定用途，不会挪作他用，还有别的账户里也有存款用于同样的用途，比如政府的住房公积金，那么我这样设置账户：
 
-```plaintext
+```nil
 1970-01-01 open Assets:Saving:HouseFund:Bank:CMB:CardXXXX:Deposit CNY
 1970-01-01 open Assets:Saving:HouseFund:Goverment CNY
 ```
@@ -130,7 +126,7 @@ option "operating_currency" "USD"
 
 假设我在招商银行有一张银联信用卡，一张 Visa 信用卡；在交通银行有一张银联信用卡，一张 Vsia 信用卡。由于招商银行共享额度、合并账单、征信内只有一个账户；交通银行虽然也共享额度，但是拆分账单，每个账单要单独还款，并且在征信系统内一卡一账户，我这样设置账户：
 
-```plaintext
+```nil
 1970-01-01 open Liabilities:CreditCards:CMB CNY
 1970-01-01 open Liabilities:Creditcards:COMM:CardVisaXXXX CNY
 1970-01-01 open Liabilities:Creditcards:COMM:CardUnionXXXX CNY
@@ -151,9 +147,7 @@ option "operating_currency" "USD"
 
 -   政府相关的：主要是五险一金、税之类。
 
-<!--listend-->
-
-```plaintext
+```nil
 1970-01-01 open Expenses:Government:Pension CNY
 1970-01-01 open Expenses:Government:Unemployment CNY
 1970-01-01 open Expenses:Government:MedicalCare CNY
@@ -168,7 +162,7 @@ option "operating_currency" "USD"
 
 目前我只设置了一个 Equity 账户 Equity:Opening-Balances，用来平衡初始资产、负债账户时的会计恒等式。也就是，我想往一个银行卡账户里添加 1000 元，并且想保持平衡，那么需要从某个账户减 1000 元，在初始化时，这个账户就是 Equity:Opening-Balances。一个示例：
 
-```plaintext
+```nil
 1970-01-01 open Assets:Bank:CMB:CardXXXX CNY
 1991-05-21 pad Assets:Bank:CMB:C6698 Equity:Opening-Balances
 2018-10-17 balance Assets:Bank:CMB:C6698 11912.77 CNY
@@ -179,7 +173,7 @@ option "operating_currency" "USD"
 
 设置了账户之后，要把对应的现实账户的状态反应出来，需要用 `balance` 指令进行断言操作，用 `pad` 指令进行辅助。比如在设置账户的当时，银行卡内有存款 1000 元，可以在 `open` 账户那行之后添加变成下面的结构，注意 beancount 默认交易都在一天的开始发生，所以 balance 断言要写在第二天，表示截止到第二天零点的情况。
 
-```plaintext
+```nil
 1970-01-01 open Assets:Bank:CMB:Card0817
 1970-01-01 pad Assets:Bank:CMB:Card0817 Equity:Opening-Balances
 1970-01-02 balance Assets:Bank:CMB:Card0817 1000 CNY
@@ -192,7 +186,7 @@ option "operating_currency" "USD"
 
 除了账户和 balance 断言， `.bean` 文件里大部分内容是一笔笔交易记录，一个笔交易在 beancount 里一般长这样：
 
-```plaintext
+```nil
 2018-10-22 * "描述"
   card: "CardXXXX"
   date: 2018-10-21
@@ -300,7 +294,7 @@ bean-extract yc.import ${PWD}/documents.tmp > tmp.bean
 
 导入完成后，再执行下面的命令，把原文件归档到 documents 目录里。
 
-```plaintext
+```nil
 bean-file yc.import ${PWD}/documents.tmp -o documents
 ```
 

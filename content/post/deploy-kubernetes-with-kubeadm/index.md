@@ -2,9 +2,9 @@
 title = "用 kubeadm 部署简易 kubernetes 集群"
 author = ["chi"]
 date = 2019-12-04T11:34:00+08:00
-lastmod = 2019-12-04T18:54:57+08:00
+lastmod = 2020-04-21T16:03:45+08:00
 tags = ["kubernetes"]
-categories = ["烂笔头"]
+categories = ["Post"]
 draft = false
 toc = true
 +++

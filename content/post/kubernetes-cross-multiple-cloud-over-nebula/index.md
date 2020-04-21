@@ -2,9 +2,9 @@
 title = "用 slack/nebula 在公网上部署 kubernetes 集群"
 author = ["chi"]
 date = 2019-12-04T18:52:00+08:00
-lastmod = 2019-12-04T19:07:12+08:00
+lastmod = 2020-04-21T16:03:45+08:00
 tags = ["kubernetes", "nebula"]
-categories = ["烂笔头"]
+categories = ["Post"]
 draft = false
 toc = true
 +++
