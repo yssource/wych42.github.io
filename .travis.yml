@@ -1,17 +1,13 @@
 language: go
 
-install:
-  - mkdir -p $HOME/src
-  - cd $HOME/src
-  - git clone https://github.com/gohugoio/hugo.git
-  - cd hugo
-  - go install
-  - cd ${TRAVIS_BUILD_DIR}
-
-cache: $HOME/src
+services:
+  - docker
 
 script:
-  - hugo # This commands builds your website on travis
+  - docker run --rm -i \
+    -v $(pwd):/src \
+    -v $(pwd)/public:/target \
+    klakegg/hugo:0.69.0
 
 deploy:
   local_dir: public # Default static site output dir for Hugo
