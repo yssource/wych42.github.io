@@ -4,6 +4,7 @@ title = "Chi's Journal"
 theme = "hugo-octopress"
 pygmentsCodeFences = true
 disqusShortname = "chis-journal"
+hasCJKLanguage = true
 
 [markup]
   [markup.highlight]
