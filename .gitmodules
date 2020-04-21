@@ -9,3 +9,6 @@
 [submodule "Hugo-Octopress"]
 	path = Hugo-Octopress
 	url = https://github.com/parsiya/Hugo-Octopress
+[submodule "themes/beautifulhugo"]
+	path = themes/beautifulhugo
+	url = https://github.com/halogenica/beautifulhugo.git

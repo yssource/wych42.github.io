@@ -1,25 +1,26 @@
 +++
 title = "Export Org-mode in Chinese to PDF with custom latex class"
-author = ["chi"]
 date = 2020-04-20T18:50:00+08:00
-lastmod = 2020-04-21T16:03:45+08:00
+lastmod = 2020-04-21T19:58:23+08:00
 tags = ["emacs", "latex", "pdf"]
 categories = ["Post"]
 draft = false
 toc = true
 +++
 
-目前在用的 emacs 配置基于 [redguardtoo/emacs.d](https://github.com/redguardtoo/emacs.d) 修改而来。
+A simple configuration to export org-mode doc in chinese to pdf with custom latex class, based on [redguardtoo/emacs.d](https://github.com/redguardtoo/emacs.d).
 
-配置的默认功能有：
+<!--more-->
 
--   使用 [ElegantLaTeX/ElegantPaper](https://github.com/ElegantLaTeX/ElegantPaper) 作为默认的导出模板;
--   使用 [gpoore/minted](https://github.com/gpoore/minted) 进行代码高亮;
--   使用 ctex 默认的字体设置;
+Features are:
 
-下载 [elegantpaper.cls](https://github.com/ElegantLaTeX/ElegantPaper/blob/master/elegantpaper.cls) 放到 \`org\` 文档同级目录内。
+-   use [ElegantLaTeX/ElegantPaper](https://github.com/ElegantLaTeX/ElegantPaper) as default template;
+-   use [gpoore/minted](https://github.com/gpoore/minted) to highlight code;
+-   use `ctex` package's default font settings;
 
-在 `~/.custom.el` 里添加配置：
+Download [elegantpaper.cls](https://github.com/ElegantLaTeX/ElegantPaper/blob/master/elegantpaper.cls) to the same directory contanis `org` files。
+
+Add configs below to your  `~/.custom.el` ：
 
 ```lisp
 (with-eval-after-load 'ox-latex
@@ -42,7 +43,7 @@ toc = true
   (add-to-list 'org-latex-packages-alist '("" "minted")))
 ```
 
-在 \`org\` 文档的头部添加参数：
+Add to the top of your `org` file：
 
 ```org
 #+LATEX_COMPILER: xelatex
@@ -50,15 +51,15 @@ toc = true
 #+OPTIONS: prop:t
 ```
 
-安装 `minted` 的依赖:
+Install dependencies of `minted` :
 
 ```bash
 brew install pygments
 ```
 
-之后将光标移动到要导出的 Heading, `C-c C-e C-s l p` 即可。
+Move cursor to the subtree to be exported, and press key `C-c C-e C-s l p` .
 
-****参考****
+****Ref****
 
 -   <http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export>
 -   <https://orgmode.org/manual/Export-Settings.html#Export-settings>

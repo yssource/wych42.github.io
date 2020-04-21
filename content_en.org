@@ -1,0 +1,131 @@
+#+STARTUP: overview
+#+HUGO_BASE_DIR: ~/projects/chifan/sites/wych42.github.io/
+#+SEQ_TODO: TODO DRAFT DONE
+#+HUGO_AUTO_SET_LASTMOD: t
+#+hugo_locale: en
+#+property: header-args :eval never-export
+#+author: 
+#+hugo_custom_front_matter: :author "chi"
+
+* Pages
+:PROPERTIES:
+:EXPORT_HUGO_SECTION: en
+:END:
+
+** DONE Blog Archive
+   CLOSED: [2018-10-25 Thu 12:37]
+:PROPERTIES:
+:EXPORT_FILE_NAME: archive.md
+:EXPORT_HUGO_CUSTOM_FRONT_MATTER: :type archive :comment false
+:END:
+
+
+* Posts
+:PROPERTIES:
+:EXPORT_HUGO_SECTION: en/post
+:END:
+
+** DONE Export Org-mode in Chinese to PDF with custom latex class              :@Post:emacs:latex:pdf:
+   CLOSED: [2020-04-20 Mon 18:50]
+   :PROPERTIES:
+   :EXPORT_HUGO_BUNDLE: export-org-mode-in-chinese-to-pdf-with-custom-latex-class
+   :EXPORT_FILE_NAME: index
+   :EXPORT_DATE: [2020-04-20 Mon 18:14]
+   :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
+   :END:
+
+A simple configuration to export org-mode doc in chinese to pdf with custom latex class, based on [[https://github.com/redguardtoo/emacs.d][redguardtoo/emacs.d]].
+
+#+hugo: more
+
+Features are:
+
+- use [[https://github.com/ElegantLaTeX/ElegantPaper][ElegantLaTeX/ElegantPaper]] as default template;
+- use [[https://github.com/gpoore/minted][gpoore/minted]] to highlight code;
+- use =ctex= package's default font settings;
+
+Download [[https://github.com/ElegantLaTeX/ElegantPaper/blob/master/elegantpaper.cls][elegantpaper.cls]] to the same directory contanis =org= files。
+
+Add configs below to your  =~/.custom.el= ：
+
+#+BEGIN_SRC lisp
+(with-eval-after-load 'ox-latex
+ ;; http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export
+ ;; latexmk runs pdflatex/xelatex (whatever is specified) multiple times
+ ;; automatically to resolve the cross-references.
+ (setq org-latex-pdf-process '("latexmk -xelatex -quiet -shell-escape -f %f"))
+ (add-to-list 'org-latex-classes
+               '("elegantpaper"
+                 "\\documentclass[lang=cn]{elegantpaper}
+                 [NO-DEFAULT-PACKAGES]
+                 [PACKAGES]
+                 [EXTRA]"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+  (setq org-latex-listings 'minted)
+  (add-to-list 'org-latex-packages-alist '("" "minted")))
+#+END_SRC
+
+Add to the top of your =org= file：
+
+#+BEGIN_SRC org
+#+LATEX_COMPILER: xelatex
+#+LATEX_CLASS: elegantpaper
+#+OPTIONS: prop:t
+#+END_SRC
+
+
+Install dependencies of =minted= :
+
+#+BEGIN_SRC bash
+brew install pygments
+#+END_SRC
+
+Move cursor to the subtree to be exported, and press key =C-c C-e C-s l p= .
+
+**Ref**
+
+- http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export
+- https://orgmode.org/manual/Export-Settings.html#Export-settings
+** TODO Configure Debian box as router                                          :@Post:debian:router:network:
+   :PROPERTIES:
+   :EXPORT_HUGO_BUNDLE: configure-debian-box-as-router
+   :EXPORT_FILE_NAME: index
+   :EXPORT_DATE: [2020-04-14 Tue 16:36]
+   :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
+   :END:
+
+
+* Verses
+:PROPERTIES:
+:EXPORT_HUGO_SECTION: en/verse
+:END:
+
+** DONE socat                                                                   :@Verse:socat:
+   CLOSED: [2019-12-20 Fri 18:07]
+   :PROPERTIES:
+   :EXPORT_HUGO_BUNDLE: socat
+   :EXPORT_FILE_NAME: index
+   :EXPORT_DATE: [2019-12-20 Fri 18:01]
+   :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
+   :END:
+
+snippets:
+
+- simple udp echo server: echo payload with client ip:port
+
+#+BEGIN_SRC bash
+socat -d -d udp-recvfrom:1926,fork system:"echo \"\$SOCAT_PEERADDR:\$SOCAT_PEERPORT\"; cat"
+
+client > echo "0817" | socat - udp-sendto:server-ip:1926
+#+END_SRC
+
+- simple tcp echo server: echo payload with client ip:port
+
+#+BEGIN_SRC bash
+socat -d -d tcp-l:1926,fork system:"echo \"\$SOCAT_PEERADDR:\$SOCAT_PEERPORT\"; cat"
+client > echo "0817" | socat  tcp:server-ip:1926 -
+#+END_SRC

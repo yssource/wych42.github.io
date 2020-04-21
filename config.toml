@@ -1,10 +1,32 @@
 baseURL = "https://yuchi.me/"
-languageCode = "zh-cn"
+languageCode = "en"
+footnoteReturnLinkContents = "↩"
 title = "Chi's Journal"
-theme = "hugo-octopress"
-pygmentsCodeFences = true
-disqusShortname = "chis-journal"
+theme = "beautifulhugo"
 hasCJKLanguage = true
+
+
+DefaultContentLanguage = "en"
+[languages]
+  [languages.zh-CN]
+    weight = 2
+    contentDir = "content/cn"
+  [languages.en]
+    weight = 1
+    contentDir = "content/en"
+
+[params]
+  subtitle = "- Ecclesiastes 1.11"
+  mainSections = ["post"]
+  favicon = "static/img/favicon.ico"
+  dateFormat = "2006/01/02"
+  hideAuthor = false
+  googleAnalytics = "UA-164155675-1"
+  disqusShortname = "chis-journal"
+  gcse = "008088471589664132648:odwqgugznkt"
+
+[Author]
+  name = "chi"
 
 [markup]
   [markup.highlight]
@@ -17,14 +39,6 @@ hasCJKLanguage = true
     noClasses = true
     style = "solarized-dark"
     tabWidth = 4
-
-[params]
-  subtitle = "- Ecclesiastes 1.11"
-  author = "chi"
-  searchEngineURL = "https://www.google.com/search"
-  rss = true
-  mainSections = ["post"]
-  googleAnalytics = "UA-164155675-1"
 
 [blackfriday]
   hrefTargetBlank = true
@@ -42,9 +56,3 @@ hasCJKLanguage = true
   name = "Verse"
   url = "/verse"
   weight = -9
-
-[[menu.main]]
-  name = "Archive"
-  url = "/archive"
-  weight = 1
-

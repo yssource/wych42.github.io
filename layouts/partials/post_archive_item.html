@@ -1,0 +1,19 @@
+<article class="post-preview">
+    <a href="{{ .Permalink }}">
+        <h3 class="post-title">{{ .Title }}</h3>
+        {{ if .Params.subtitle }}
+        <h4 class="post-subtitle">
+            {{ .Params.subtitle }}
+        </h4>
+        {{ end }}
+    </a>
+
+    {{ if .Params.tags }}
+    <div class="blog-tags">
+        {{ range .Params.tags }}
+        <a href="{{ $.Site.LanguagePrefix | absURL }}/tags/{{ . | urlize }}/">{{ . }}</a>&nbsp;
+        {{ end }}
+    </div>
+    {{ end }}
+
+</article>
