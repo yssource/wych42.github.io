@@ -5,6 +5,7 @@ theme = "beautifulhugo"
 hasCJKLanguage = true
 languageCode = "zh-cn"
 DefaultContentLanguage = "zh-cn"
+enableGitInfo = true
 
 [languages]
   [languages.zh-CN]
@@ -25,6 +26,7 @@ DefaultContentLanguage = "zh-cn"
   googleAnalytics = "UA-164155675-1"
   disqusShortname = "chis-journal"
   gcse = "008088471589664132648:odwqgugznkt"
+  commit = "https://github.com/wych42/wych42.github.io/"
 
 [Author]
   name = "chi"
