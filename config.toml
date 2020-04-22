@@ -6,6 +6,8 @@ hasCJKLanguage = true
 languageCode = "zh-cn"
 DefaultContentLanguage = "zh-cn"
 enableGitInfo = true
+googleAnalytics = "UA-164155675-1"
+disqusShortname = "chis-journal"
 
 [languages]
   [languages.zh-CN]
