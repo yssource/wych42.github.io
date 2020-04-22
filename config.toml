@@ -25,8 +25,6 @@ disqusShortname = "chis-journal"
   favicon = "static/img/favicon.ico"
   dateFormat = "2006/01/02"
   hideAuthor = false
-  googleAnalytics = "UA-164155675-1"
-  disqusShortname = "chis-journal"
   gcse = "008088471589664132648:odwqgugznkt"
   commit = "https://github.com/wych42/wych42.github.io/"
 
