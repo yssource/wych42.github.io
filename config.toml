@@ -1,13 +1,11 @@
-baseURL = "https://yuchi.me/"
-footnoteReturnLinkContents = "↩"
+baseURL = "http://yuchi.me/"
 title = "Chi's Journal"
-theme = "beautifulhugo"
+theme = "calico-zen"
 hasCJKLanguage = true
 languageCode = "zh-cn"
 DefaultContentLanguage = "zh-cn"
-enableGitInfo = true
-googleAnalytics = "UA-164155675-1"
 disqusShortname = "chis-journal"
+paginate = 5
 
 [languages]
   [languages.zh-CN]
@@ -24,9 +22,10 @@ disqusShortname = "chis-journal"
   mainSections = ["post"]
   favicon = "static/img/favicon.ico"
   dateFormat = "2006/01/02"
-  hideAuthor = false
-  gcse = "008088471589664132648:odwqgugznkt"
-  commit = "https://github.com/wych42/wych42.github.io/"
+  googleAnalytics = "UA-164155675-1"
+  truncateSummary = false
+  selfHosted = true
+  poweredBy = 'Written with <a target="_blank" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" href="https://orgmode.org/">Org-mode</a>. Rendered by <a target="_blank" href="https://gohugo.io">Hugo</a> and <a target="_blank" href="https://github.com/wych42/calico-zen/">calico-zen</a>.'
 
 [Author]
   name = "chi"
@@ -50,12 +49,34 @@ disqusShortname = "chis-journal"
   plainIDAnchors = true
   extensions = ["hardLineBreak"]
 
-[[menu.main]]
-  name = "Blog"
-  url = "/"
-  weight = -10
+[menu]
+  [[menu.main]]
+    name = "Home"
+    url = "/"
+    pre = "<i class='icon-home'></i>"
+    weight = "-99"
+  
+  [[menu.main]]
+    name = "Archive"
+    url = "/archive"
+    pre = "<i class='icon-folder-open-alt'></i>"
+    weight = "-20"
 
-[[menu.main]]
-  name = "Verse"
-  url = "/verse"
-  weight = -9
+   [[menu.main]]
+    name = "Verse"
+    url = "/verse"
+    pre = "<i class='icon-paste'></i>"
+    weight = "-10"
+
+   [[menu.main]]
+    name = "Tags"
+    url = "/tags"
+    pre = "<i class='icon-tags'></i>"
+    weight = "-10"
+
+  [[menu.main]]
+    name = "Rss"
+    url = "/index.xml"
+    pre = "<i class='icon-rss'></i>"
+    weight = "0"
+ 

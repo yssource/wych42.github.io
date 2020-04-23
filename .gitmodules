@@ -12,3 +12,6 @@
 [submodule "themes/beautifulhugo"]
 	path = themes/beautifulhugo
 	url = https://github.com/halogenica/beautifulhugo.git
+[submodule "themes/calico-zen"]
+	path = themes/calico-zen
+	url = https://github.com/wych42/calico-zen
