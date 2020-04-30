@@ -129,3 +129,57 @@ client > echo "0817" | socat - udp-sendto:server-ip:1926
 socat -d -d tcp-l:1926,fork system:"echo \"\$SOCAT_PEERADDR:\$SOCAT_PEERPORT\"; cat"
 client > echo "0817" | socat  tcp:server-ip:1926 -
 #+END_SRC
+** DONE Setup build environment for Android app in Ubuntu 18                    :@Verse:android:ubuntu:jdk:
+   CLOSED: [2020-04-30 Thu 15:21]
+   :PROPERTIES:
+   :EXPORT_HUGO_BUNDLE: setup-build-environment-for-android-app-in-ubuntu-18
+   :EXPORT_FILE_NAME: index
+   :EXPORT_DATE: [2020-04-30 Thu 14:42]
+   :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
+   :END:
+
+*** Install sdk command-line tools
+
+#+BEGIN_SRC bash
+sudo apt install unzip # ensure unzip installed
+sudo mkdir -p /usr/local/android-sdk/tools
+cd /tmp
+wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip
+unzip commandlinetools-linux-6200805_latest.zip
+sudo mv tools/* /usr/local/android-sdk/tools/
+
+# setup path, change ~/.bashrc to your shellrc
+echo "export PATH=$PATH:/usr/local/android-sdk/tools/bin:/usr/local/android-sdk/platform-tools" >> ~/.bashrc
+source ~/.bashrc
+#+END_SRC
+
+*** Install oracle-jdk8 
+
+Skip this section if jdk8 is already set.
+
+Oracle JDK8 will be installed via [[https://launchpad.net/~kkeiichi/+archive/ubuntu/java][ppa:kkeiichi/java]], jdk-8u241-linux-x64.tar.gz should be downloaded and uploaded to the server before continuing.
+
+Download link: [[https://www.oracle.com/java/technologies/javase-jdk8-downloads.html][Official Site]] [[https://www.dropbox.com/s/yth6qme9zmuv3ow/jdk-8u241-linux-x64.tar.gz?dl=0][DropboxBackup]](package install script will check file shasum)
+
+#+BEGIN_SRC bash
+sudo mkdir -p /var/cache/oracle-java8-installer-local
+sudo cp jdk-8u241-linux-x64.tar.gz /var/cache/oracle-java8-installer-local/
+ 
+sudo add-apt-repository ppa:kkeiichi/java
+sudo atp update
+sudo apt install oracle-java8-installer-local
+sudo apt install oracle-java8-set-default-local # set default
+#+END_SRC
+
+*** Install sdk
+
+#+BEGIN_SRC bash
+mkdir ~/.android
+echo "export ANDROID_HOME=~/.android" >> ~/.bashrc
+source ~/.bashrc
+
+# accept linceses
+yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses
+# download sdk
+yes | sdkmanager --sdk_root=$ANDROID_HOME "platforms;android-28" "build-tools;28.0.3"
+#+END_SRC
