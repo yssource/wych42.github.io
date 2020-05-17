@@ -1,7 +1,7 @@
 +++
 title = "socat"
 date = 2019-12-20T18:07:00+08:00
-lastmod = 2020-04-21T18:41:28+08:00
+lastmod = 2020-05-17T17:24:13+08:00
 tags = ["socat"]
 categories = ["Verse"]
 draft = false

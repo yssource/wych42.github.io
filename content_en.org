@@ -129,6 +129,7 @@ client > echo "0817" | socat - udp-sendto:server-ip:1926
 socat -d -d tcp-l:1926,fork system:"echo \"\$SOCAT_PEERADDR:\$SOCAT_PEERPORT\"; cat"
 client > echo "0817" | socat  tcp:server-ip:1926 -
 #+END_SRC
+
 ** DONE Setup build environment for Android app in Ubuntu 18                    :@Verse:android:ubuntu:jdk:
    CLOSED: [2020-04-30 Thu 15:21]
    :PROPERTIES:

@@ -1,7 +1,7 @@
 +++
 title = "Export Org-mode in Chinese to PDF with custom latex class"
 date = 2020-04-20T18:50:00+08:00
-lastmod = 2020-04-21T19:58:23+08:00
+lastmod = 2020-05-17T18:48:33+08:00
 tags = ["emacs", "latex", "pdf"]
 categories = ["Post"]
 draft = false

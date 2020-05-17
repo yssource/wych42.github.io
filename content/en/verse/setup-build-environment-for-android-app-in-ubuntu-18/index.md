@@ -1,7 +1,7 @@
 +++
 title = "Setup build environment for Android app in Ubuntu 18"
 date = 2020-04-30T15:21:00+08:00
-lastmod = 2020-04-30T15:21:52+08:00
+lastmod = 2020-05-17T18:48:33+08:00
 tags = ["android", "ubuntu", "jdk"]
 categories = ["Verse"]
 draft = false

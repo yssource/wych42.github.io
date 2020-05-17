@@ -1,7 +1,7 @@
 +++
 title = "beancount 简易入门指南"
 date = 2018-10-25T12:25:00+08:00
-lastmod = 2020-04-21T18:26:14+08:00
+lastmod = 2020-05-17T18:48:36+08:00
 tags = ["beancount", "记账"]
 categories = ["Post"]
 draft = false

@@ -1,11 +1,22 @@
 baseURL = "https://yuchi.me/"
 title = "Chi's Journal"
 theme = "calico-zen"
+enableEmoji = true
+
 hasCJKLanguage = true
 languageCode = "zh-cn"
-DefaultContentLanguage = "zh-cn"
+defaultContentLanguage = "zh-cn"
+
+googleAnalytics = "UA-164155675-1"
 disqusShortname = "chis-journal"
 paginate = 5
+
+enableGitInfo = true
+
+PygmentsCodeFences = true # Enable syntax highlighting with GitHub flavoured code fences
+PygmentsUseClasses = true # Use CSS classes to format highlighted code
+PygmentsCodefencesGuessSyntax = true
+PygmentsOptions = "linenos=table"
 
 [languages]
   [languages.zh-CN]
@@ -18,29 +29,26 @@ paginate = 5
     contentDir = "content/en"
 
 [params]
-  subtitle = "- Ecclesiastes 1.11"
+  since = "2018"
+  homeFullContent = false
+  rssFullContent = true   
   mainSections = ["post"]
+
+  description = "- Ecclesiastes 1.11"
+
+  archive-paginate = 20
+  dateFormatToUse = "2006/01/02"
+  showMenuLanguageChooser = true
+  toc = true              
+  photoswipe = true         
+
   favicon = "static/img/favicon.ico"
-  dateFormat = "2006/01/02"
-  googleAnalytics = "UA-164155675-1"
   truncateSummary = false
   selfHosted = true
   poweredBy = 'Written with <a target="_blank" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" href="https://orgmode.org/">Org-mode</a>. Rendered by <a target="_blank" href="https://gohugo.io">Hugo</a> and <a target="_blank" href="https://github.com/wych42/calico-zen/">calico-zen</a>.'
 
-[Author]
+[author]
   name = "chi"
-
-[markup]
-  [markup.highlight]
-    codeFences = true
-    guessSyntax = false
-    hl_Lines = ""
-    lineNoStart = 1
-    lineNos = false
-    lineNumbersInTable = true
-    noClasses = true
-    style = "solarized-dark"
-    tabWidth = 4
 
 [blackfriday]
   hrefTargetBlank = true
@@ -57,16 +65,16 @@ paginate = 5
     weight = "-99"
   
   [[menu.main]]
-    name = "Archive"
-    url = "/archive"
+    name = "Verse"
+    url = "/verse/"
     pre = "<i class='icon-folder-open-alt'></i>"
     weight = "-20"
 
-   [[menu.main]]
-    name = "Verse"
-    url = "/verse"
-    pre = "<i class='icon-paste'></i>"
-    weight = "-10"
+  [[menu.main]]
+    name = "Archive"
+    url = "/post/"
+    pre = "<i class='icon-folder-open-alt'></i>"
+    weight = "-20"
 
    [[menu.main]]
     name = "Tags"
@@ -75,7 +83,7 @@ paginate = 5
     weight = "-10"
 
   [[menu.main]]
-    name = "Rss"
+    name = "RSS"
     url = "/index.xml"
     pre = "<i class='icon-rss'></i>"
     weight = "0"
