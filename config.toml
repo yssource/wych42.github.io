@@ -52,6 +52,7 @@ PygmentsOptions = "linenos=table"
 
 [blackfriday]
   hrefTargetBlank = true
+  noreferrerLinks = true
   angledQuotes = true
   fractions = false
   plainIDAnchors = true
