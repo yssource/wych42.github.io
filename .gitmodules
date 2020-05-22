@@ -6,18 +6,6 @@
 	path = public
 	url = git@github.com:RichardW42/richardw42.github.io.git
 	branch = master
-[submodule "Hugo-Octopress"]
-	path = Hugo-Octopress
-	url = https://github.com/parsiya/Hugo-Octopress
-[submodule "themes/beautifulhugo"]
-	path = themes/beautifulhugo
-	url = https://github.com/halogenica/beautifulhugo.git
 [submodule "themes/calico-zen"]
 	path = themes/calico-zen
 	url = https://github.com/wych42/calico-zen
-[submodule "themes/octopress"]
-	path = themes/octopress
-	url = https://github.com/parsiya/hugo-octopress/
-[submodule "themes/jane"]
-	path = themes/jane
-	url = https://github.com/xianmin/hugo-theme-jane.git
