@@ -30,7 +30,7 @@ enableGitInfo = true
     lineNoStart = 1
     lineNos = true
     lineNumbersInTable = true
-    noClasses = true
+    noClasses = false
     style = "solarized-light"
     tabWidth = 4
 
@@ -62,6 +62,13 @@ enableGitInfo = true
   truncateSummary = false
   selfHosted = true
   poweredBy = 'Written with <a target="_blank" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" href="https://orgmode.org/">Org-mode</a>. Rendered by <a target="_blank" href="https://gohugo.io">Hugo</a> and <a target="_blank" href="https://github.com/wych42/calico-zen/">calico-zen</a>.'
+
+  disable_codefolding = false
+  codefolding_show = "hide"
+  codefolding_nobutton = false
+
+  # customCSS = ["styles.css"]
+  # customJS = ["scripts.js"]
 
 [author]
   name = "chi"
