@@ -1,7 +1,7 @@
 +++
 title = "使用 docker 部署一个生产环境可用的 ELK 集群"
 date = 2020-05-27T22:58:00+08:00
-lastmod = 2020-05-27T23:02:32+08:00
+lastmod = 2020-05-27T23:04:01+08:00
 tags = ["elasticsearch", "docker", "tls"]
 categories = ["Post"]
 draft = false
@@ -63,8 +63,8 @@ toc = true
 
 #### 数据目录 {#数据目录}
 
--   es 数据存储在 \`/data/es/${NODE\_NAME}-data/\` 目录
--   es 日志存储在 \`/data/es/${NODE\_NAME}-log/\` 目录
+-   es 数据存储在 `/data/es/${NODE_NAME}-data/` 目录
+-   es 日志存储在 `/data/es/${NODE_NAME}-log/` 目录
 
 可以在各个节点上保存并执行下面的脚本:
 

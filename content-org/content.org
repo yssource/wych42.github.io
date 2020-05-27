@@ -728,8 +728,8 @@ brew install pygments
 
 以方便在已经部署了 elasticsearch 示例的设备上测试。
 ***** 数据目录
-- es 数据存储在 `/data/es/${NODE_NAME}-data/` 目录
-- es 日志存储在 `/data/es/${NODE_NAME}-log/` 目录
+- es 数据存储在 =/data/es/${NODE_NAME}-data/= 目录
+- es 日志存储在 =/data/es/${NODE_NAME}-log/= 目录
 
 可以在各个节点上保存并执行下面的脚本:
 
