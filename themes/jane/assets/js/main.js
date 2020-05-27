@@ -8,11 +8,11 @@
 /**
  * back to top
  */
-var backToTop = function() {
+var backToTop = function () {
   const $backToTop = $('#back-to-top');
 
   $(window)
-    .scroll(function() {
+    .scroll(function () {
       if ($(window)
         .scrollTop() > 100) {
         $backToTop.fadeIn(1000);
@@ -21,7 +21,7 @@ var backToTop = function() {
       }
     })
 
-  $backToTop.click(function() {
+  $backToTop.click(function () {
     $('body,html')
       .animate({
         scrollTop: 0
@@ -33,7 +33,7 @@ var backToTop = function() {
 /**
  * mobile Navbar
  */
-var mobileNavbar = function() {
+var mobileNavbar = function () {
   const $mobileNav = $('#mobile-navbar');
   const $mobileNavIcon = $('.mobile-navbar-icon');
   const slideout = new Slideout({
@@ -84,21 +84,18 @@ var mobileNavbar = function() {
  */
 function initToc() {
   const $toc = $('#post-toc');
-  if ($toc.length && $(window)
-    .width() >= 1080) {
-    $(window)
-      .scroll(function() {
-        if ($(window)
-          .scrollTop() > 100) {
-          $toc.fadeIn(1000);
-        } else {
-          $toc.fadeOut(100);
-        }
-      });
+  if ($toc.length && $(window).width() >= 1080) {
+    $(window).scroll(function () {
+      if ($(window).scrollTop() > 100) {
+        $toc.fadeIn(1000);
+      } else {
+        $toc.fadeOut(100);
+      }
+    });
   }
 }
 
-var toc = function() {
+var toc = function () {
   const tocContainer = document.getElementById('post-toc');
   if (tocContainer !== null) {
     const toc = document.getElementById('TableOfContents');
@@ -136,7 +133,7 @@ var linkifyAnchors = function (level, containingElement) {
   }
 };
 
-var headerAnchor = function() {
+var headerAnchor = function () {
   var contentBlock = document.getElementsByClassName("post-content")[0];
   if (!contentBlock) {
     return;

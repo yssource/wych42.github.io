@@ -25,8 +25,7 @@
 :EXPORT_HUGO_SECTION: cn/post
 :END:
 
-** DONE 企业微信远程打卡                                                        :@Post:wechat:work:
-   CLOSED: [2018-04-23 Thu 13:41]
+** DRAFT 企业微信远程打卡                                                       :@Post:wechat:work:
    :PROPERTIES:
    :EXPORT_HUGO_BUNDLE: wechat-punch
    :EXPORT_FILE_NAME: index
@@ -678,9 +677,583 @@ brew install pygments
    :EXPORT_DATE: [2020-04-14 Tue 16:36]
    :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
    :END:
+** DONE 使用 docker 部署一个生产环境可用的 ELK 集群                             :@Post:elasticsearch:docker:tls:
+   CLOSED: [2020-05-27 Wed 22:58]
+   :PROPERTIES:
+   :EXPORT_HUGO_BUNDLE: deploy-production-ready-elk-cluster-with-docker
+   :EXPORT_HUGO_PAIRED_SHORTCODES: %notice expand gallery
+   :EXPORT_FILE_NAME: index.md
+   :EXPORT_DATE: [2020-05-19 Tue 17:03]
+   :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
+   :END:
+   
+近日在网上冲浪的时候，看到 soulteary 同学撰写的 [[https://soulteary.com/2020/05/04/use-docker-to-build-elk-environment.html][使用 Docker 搭建 ELK 环境]]，发现文中提及的 [[https://github.com/deviantony/docker-elk][docker-elk]] 项目. 
+与我自行维护用于部署生产环境 ELK 集群的项目, 在代码结构上十分相似。便将本地项目迁移到 docker-elk, 并向上游项目发了一个针对开启 TLS 的 [[https://github.com/deviantony/docker-elk/pulls][Patch]].
+顺便针对在生产环境部署多主机节点集群、开启 TLS 加密通信做一个详细的介绍。
 
+本文将会涉及到：
 
-* Verses
-:PROPERTIES:
-:EXPORT_HUGO_SECTION: cn/verse
-:END:
+- 基于 [[https://github.com/deviantony/docker-elk][docker-elk]] 项目进行部署操作，避免重复造轮子
+- 用三个主机节点组成 elasticsearch 集群
+- 集群内部使用自签名的 TLS 证书通信
+- kibana, logstash 与 elasticsearch 集群的通信开启 TLS 加密
+
+*** 准备工作
+**** 熟悉 docker 和 docker-elk 项目
+后续假设读者已经熟悉:
+
+- docker/docker-compose 的基本用法
+- docker-elk 项目的用法
+- elasticsearch 的基本概念
+
+如果还不熟悉，可以跟着开头体文章操作一次。
+**** 节点规划
+***** 节点
+ 本文将使用三个主机节点部署 elasticsearch 集群, 三个节点在同一个内网中，并且可以互相连接:
+
+ - 节点A: 主机名: =es01.yuchi.lab=, IP: =10.11.12.13=
+ - 节点B: 主机名: =es02.yuchi.lab=, IP: =10.11.12.14=
+ - 节点C: 主机名: =es03.yuchi.lab=, IP: =10.11.12.15=
+
+备注:
+
+- 节点A作为 master 节点使用
+- 主机名将作为环境变量 NODE_NAME，在后文使用
+
+***** 端口 
+所有 elasticsearch 实例，在主机上暴露的端口修改为:
+
+- http: 9220(默认 9200)
+- tcp: 9320(默认 9300)
+
+以方便在已经部署了 elasticsearch 示例的设备上测试。
+***** 数据目录
+- es 数据存储在 `/data/es/${NODE_NAME}-data/` 目录
+- es 日志存储在 `/data/es/${NODE_NAME}-log/` 目录
+
+可以在各个节点上保存并执行下面的脚本:
+
+#+NAME: prepare_dir.sh
+#+BEGIN_SRC bash
+#!/bin/bash
+
+if [[ "x$1" == "x" ]]; then
+    echo "need param as NODE_NAME"
+    exit 1
+fi
+export NODE_NAME=$1
+
+dataDir="/data/es/${NODE_NAME}-data/"
+logDir="/data/es/${NODE_NAME}-log/"
+
+sudo mkdir $dataDir -p
+sudo mkdir $logDir -p
+
+sudo chmod g+rwx $dataDir
+sudo chmod g+rwx $logDir
+
+sudo chgrp 1000 $dataDir
+sudo chgrp 1000 $logDir
+#+END_SRC
+
+然后执行(替换 NODE_NAME 为真实的主机名): 
+#+BEGIN_SRC bash
+sudo bash prepare_dir.sh NODE_NAME
+#+END_SRC
+
+*** 准备配置
+**** 准备自签名证书
+生成证书在本地执行.
+
+#+attr_shortcode: warning
+#+begin_notice
+不要将证书文件添加到 git 仓库中。 
+#+end_notice
+
+***** 修改配置文件
+ 进入本地的 docker-elk 目录，添加下面的文件:
+
+ #+NAME: create_cert.yml
+ #+BEGIN_SRC yaml
+ version: "3.2"
+
+ services:
+   create_ca:
+     container_name: create_ca
+     image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
+     command: >
+       bash -c '
+         yum install -y -q -e 0 unzip;
+         if [[ ! -f /certs/ca.zip ]]; then
+           bin/elasticsearch-certutil ca --ca-dn ${CA_DN} --days ${CA_DAYS} --pass ${CA_PASSWORD} --pem --out /certs/ca.zip;
+           unzip /certs/ca.zip -d /certs;
+         fi;
+         chown -R 1000:0 /certs
+       '
+     user: "0"
+     working_dir: /usr/share/elasticsearch
+     volumes:
+       [
+         "./tls/certs:/certs",
+         "./tls:/usr/share/elasticsearch/config/certificates",
+       ]
+
+   create_certs:
+     container_name: create_certs
+     image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
+     command: >
+       bash -c '
+         yum install -y -q -e 0 unzip;
+         if [[ ! -f /certs/bundle.zip ]]; then
+           bin/elasticsearch-certutil cert --ca-cert /certs/ca/ca.crt --ca-key /certs/ca/ca.key --ca-pass ${CA_PASSWORD} --pem --in config/certificates/instances.yml -out /certs/bundle.zip;
+           unzip /certs/bundle.zip -d /certs;
+         fi;
+         chown -R 1000:0 /certs
+       '
+     user: "0"
+     working_dir: /usr/share/elasticsearch
+     volumes:
+       [
+         "./tls/certs:/certs",
+         "./tls:/usr/share/elasticsearch/config/certificates",
+       ]
+ #+END_SRC
+
+ #+NAME: tls/instances.yml
+ #+BEGIN_SRC yaml
+ instances:
+   - name: es01.yuchi.lab
+     dns:
+       - es01.yuchi.lab
+       - localhost
+       - es01
+     ip:
+       - 127.0.0.1
+       - 10.11.12.13
+   - name: es02.yuchi.lab
+     dns:
+       - es02.yuchi.lab
+       - localhost
+       - es02
+     ip:
+       - 127.0.0.1
+       - 10.11.12.14
+   - name: es03.yuchi.lab
+     dns:
+       - es03.yuchi.lab
+       - localhost
+       - es03
+     ip:
+       - 127.0.0.1
+       - 10.11.12.15
+ #+END_SRC
+
+ 在 .env 文件中添加 CA 证书相关的信息:
+ #+BEGIN_SRC plaintext
+ # self-sign tls
+ CA_PASSWORD=ChangeMe
+ CA_DN="CN=Elastic Certificate Tool Autogenerated CA"
+ CA_DAYS=3650
+ #+END_SRC
+
+***** 生成证书
+
+先执行命令生成 CA:
+#+BEGIN_SRC bash
+docker-compose -f create_cert.yml run --rm create_ca
+#+END_SRC
+
+会在 =tls/certs/= 目录下生成 CA 文件：
+
+#+BEGIN_SRC plaintext
+tls/certs/
+├── ca
+│   ├── ca.crt
+│   └── ca.key
+├── ca.zip
+#+END_SRC
+
+再使用 =tls/instances.yml= 文件生成每个节点的证书:
+
+#+BEGIN_SRC bash
+docker-compose -f create_cert.yml run --rm create_certs
+#+END_SRC
+
+最终 =tls/certs/= 目录里的文件结构如下:
+
+#+BEGIN_SRC plaintext 
+tls/certs/
+├── bundle.zip
+├── ca
+│   ├── ca.crt
+│   └── ca.key
+├── ca.zip
+├── es01.yuchi.lab
+│   ├── es01.yuchi.lab.crt
+│   └── es01.yuchi.lab.key
+├── es02.yuchi.lab
+│   ├── es02.yuchi.lab.crt
+│   └── es02.yuchi.lab.key
+└── es03.yuchi.lab
+    ├── es03.yuchi.lab.crt
+    └── es03.yuchi.lab.key
+#+END_SRC
+
+**** 更新 docker-compose 配置
+***** volume 配置
+如开头所说，我们会将数据和日志保存在主机上的 =/data/es/${NODE_NAME}-{data,log}= 目录中，需要更新 =docker-compose.yml= 中的 =volumes= 部分为:
+#+BEGIN_SRC yaml
+volumes:
+  esdata01:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: '/data/es/${NODE_NAME}-data/'
+  eslog01:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: '/data/es/${NODE_NAME}-log/'
+#+END_SRC
+
+在 =services.elasticsearch.volumes= 中添加配置，高亮的配置在原文件中存在，修改即可:
+#+BEGIN_SRC yaml :hl_lines 5-7
+services:
+  elasticsearch:
+    ...
+    volumes:
+      - type: volume
+        source: esdata01
+        target: /usr/share/elasticsearch/data
+      - type: volume
+        source: eslog01
+        target: /usr/share/elasticsearch/logs
+#+END_SRC
+***** 证书配置
+在 =.env= 文件中添加变量，设置容器内的证书路径(让 docker-compose 显得更整洁):
+#+BEGIN_SRC plaintext
+CERTS_DIR=/usr/share/elasticsearch/config/certificates
+#+END_SRC
+
+在 =services.elasticsearch.volumes= 中添加配置，挂载证书目录:
+#+BEGIN_SRC yaml
+sevices:
+  elasticsearch:
+    ...
+    volumes:
+      - type: bind
+        source: ./tls/certs
+        target: $CERTS_DIR
+        read_only: true
+#+END_SRC
+
+在 =services.elasticsearch.environment= 中添加配置，启用证书:
+#+BEGIN_SRC yaml
+sevices:
+  elasticsearch:
+    ...
+    environment:
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "true"
+      xpack.security.http.ssl.key: ${CERTS_DIR}/${NODE_NAME}/${NODE_NAME}.key
+      xpack.security.http.ssl.certificate_authorities: ${CERTS_DIR}/ca/ca.crt
+      xpack.security.http.ssl.certificate: ${CERTS_DIR}/${NODE_NAME}/${NODE_NAME}.crt
+      xpack.security.transport.ssl.enabled: "true"
+      xpack.security.transport.ssl.verification_mode: certificate
+      xpack.security.transport.ssl.certificate: ${CERTS_DIR}/${NODE_NAME}/${NODE_NAME}.crt
+      xpack.security.transport.ssl.certificate_authorities: ${CERTS_DIR}/ca/ca.crt
+      xpack.security.transport.ssl.key: ${CERTS_DIR}/${NODE_NAME}/${NODE_NAME}.key
+#+END_SRC
+***** 节点和集群配置
+继续在 =services.elasticsearch.environment= 中添加配置:
+#+BEGIN_SRC yaml :hl_lines 7,9,11,12-13
+sevices:
+  elasticsearch:
+    ...
+    environment:
+      node.name: ${NODE_NAME}
+      http.port: 9200
+      http.publish_port: 9220
+      network.host: 0.0.0.0
+      network.publish_host: ${NODE_IP}
+      transport.tcp.port: 9300
+      transport.publish_port: 9320
+      cluster.initial_master_nodes: "es01.yuchi.lab:9320"
+      discovery.seed_hosts: "es01.yuchi.lab:9320"
+
+      xpack.security.enabled: "true"
+      ...
+#+END_SRC
+
+一些解释：
+- =publish_port=: 当 elastcisearch 进程监听的端口，与实际被连接的端口不一致时，需要设置 publish_port 配置，比如容器内监听了 9200，主机上公布了 9220，集群内的其他节点就会通过 9220 进行连接
+- =publish_host=: 同样适用于容器场景，集群在节点发现时，种子节点会通知其他节点，通过 publish_host 设置的 IP 进行连接
+- =initial_master_nodes=, =seed_hosts= 都可以使用逗号分割，设置多个
+
+同时，删除这一行:
+#+BEGIN_SRC yaml :hl_lines 5,
+sevices:
+  elasticsearch:
+    ...
+    environment:
+      discovery.type: single-node
+#+END_SRC
+***** 调整系统参数
+内存、ulimit 相关参数直接修改 =docker-compose.yml= 即可, JVM 内存的具体数值需要根据主机的参数、业务需求和部署规划决定:
+
+#+BEGIN_SRC yaml
+services:
+  elasticsearch:
+  ...
+    environment:
+      bootstrap.memory_lock: "true"
+      ES_JAVA_OPTS: "-Xmx2g -Xms2g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+#+END_SRC
+
+=vm.max_map_count= 需要在主机上修改, 同时，把这一行写入 =/etc/sysctl.conf=:
+
+#+BEGIN_SRC bash
+sysctl -w vm.max_map_count=262144
+#+END_SRC
+
+***** 同步配置到各个节点
+将 docker-elk 项目同步到每个节点上。
+
+#+BEGIN_SRC bash
+rsync -aPe \
+'ssh -p{your-ssh-port}' \
+--exclude {'tls/certs/ca.zip', 'tls/certs/bundle.zip'} \
+../docker-elk/ es01.yuchi.lab:~/docker-elk
+#+END_SRC
+
+本文为了方便操作，直接使用 rsync 将整个目录拷贝到目标节点上，在实际生产环境中，可以尝试使用 ansible 等工具进行自动化操作。同时，也可以使用 ansible-vault 加密证书文件，避免明文存储和拷贝。
+
+*** 启动集群
+**** 启动 master 节点
+前面指定了 =es01.yuchi.lab= 作为集群的主节点，先启动这个节点上的服务。ssh 登录到节点上，进入 =~/docker-elk= 目录，执行:
+#+BEGIN_SRC bash
+NODE_NAME=es01.yuchi.lab NODE_IP=10.11.12.13 sudo -E docker-compose -f docker-compose.yml up elasticsearch
+#+END_SRC
+
+终端上的输出，注意观察高亮行的输出内容，表示服务启动成功:
+#+BEGIN_SRC plaintext :hl_lines 7,
+Creating volume "docker-elk_esdata01" with local driver
+Creating volume "docker-elk_eslog01" with local driver
+Creating docker-elk_elasticsearch_1 ... done
+Attaching to docker-elk_elasticsearch_1
+elasticsearch_1  | Created elasticsearch keystore in /usr/share/elasticsearch/config
+...
+elasticsearch_1  | {"type": "server", "timestamp": "2020-05-25T05:24:25,947Z", "level": "INFO", "component": "o.e.c.r.a.AllocationService", "cluster.name": "docker-cluster", "node.name": "es01.yuchi.lab", "message": "Cluster health status changed from [YELLOW] to [GREEN] (reason: [shards started [[.watcher-history-10-2020.05.25][0]]]).", "cluster.uuid": "uNb6qD9kStSiwxPIi9CvUw", "node.id": "ofLOlsGZT_OgBfJVyr1I0Q"  }
+#+END_SRC
+
+接下来，在主机上的另一个终端内，用 =curl= 检查节点的状态:
+#+BEGIN_SRC bash :hl_lines 4,
+curl -u elastic:changeme --cacert tls/certs/ca/ca.crt 'https://es01.yuchi.lab:9220/_cluster/health?pretty=true'
+{
+  "cluster_name" : "docker-cluster",
+  "status" : "green",
+  "timed_out" : false,
+  "number_of_nodes" : 1,
+  "number_of_data_nodes" : 1,
+  "active_primary_shards" : 5,
+  "active_shards" : 5,
+  "relocating_shards" : 0,
+  "initializing_shards" : 0,
+  "unassigned_shards" : 0,
+  "delayed_unassigned_shards" : 0,
+  "number_of_pending_tasks" : 0,
+  "number_of_in_flight_fetch" : 0,
+  "task_max_waiting_in_queue_millis" : 0,
+  "active_shards_percent_as_number" : 100.0
+}
+
+#+END_SRC
+**** 启动数据节点(从节点)
+在另外两个主机上，分别进入 =docker-elk= 目录，再执行:
+#+BEGIN_SRC bash
+# on es02
+NODE_NAME=es02.yuchi.lab NODE_IP=10.11.12.14 sudo -E docker-compose -f docker-compose.tls.yml up elasticsearch
+# on es03
+NODE_NAME=es03.yuchi.lab NODE_IP=10.11.12.15 sudo -E docker-compose -f docker-compose.tls.yml up elasticsearch
+#+END_SRC
+
+终端上会输出类似下面的日志：
+#+BEGIN_SRC plaintext :hl_lines 3,
+...
+elasticsearch_1  | {"type": "server", "timestamp": "2020-05-26T02:27:45,263Z", "level": "INFO", "component": "o.e.b.BootstrapChecks", "cluster.name": "docker-cluster", "node.name": "es02.yuchi.lab", "message": "bound or publishing to a non-loopback address, enforcing bootstrap checks" }
+elasticsearch_1  | {"type": "server", "timestamp": "2020-05-26T02:27:45,274Z", "level": "INFO", "component": "o.e.c.c.ClusterBootstrapService", "cluster.name": "docker-cluster", "node.name": "es02.yuchi.lab", "message": "skipping cluster bootstrapping as local node does not match bootstrap requirements: [es01.yuchi.lab]" }
+elasticsearch_1  | {"type": "server", "timestamp": "2020-05-26T02:27:46,322Z", "level": "INFO", "component": "o.e.c.s.ClusterApplierService", "cluster.name": "docker-cluster", "node.name": "es02.yuchi.lab", "message": "master node changed {previous [], current [{es01.yuchi.lab}{ofLOlsGZT_OgBfJVyr1I0Q}{2vdYT2RGT92uqH4v8S3duQ}{10.11.12.13}{10.11.12.13:9320}{dilm}{ml.machine_memory=201400594432, ml.max_open_jobs=20, xpack.installed=true}]}, added {{es01.yuchi.lab}{ofLOlsGZT_OgBfJVyr1I0Q}{2vdYT2RGT92uqH4v8S3duQ}{10.11.12.13}{10.11.12.13:9320}{dilm}{ml.machine_memory=201400594432, ml.max_open_jobs=20, xpack.installed=true}}, term: 4, version: 80, reason: ApplyCommitRequest{term=4, version=80, sourceNode={es01.yuchi.lab}{ofLOlsGZT_OgBfJVyr1I0Q}{2vdYT2RGT92uqH4v8S3duQ}{10.11.12.13}{10.11.12.13:9320}{dilm}{ml.machine_memory=201400594432, ml.max_open_jobs=20, xpack.installed=true}}" }
+...
+#+END_SRC
+
+此时再次检查集群状态,可以看到节点数量已经变成三个：
+#+BEGIN_SRC bash :hl_lines 6-7
+curl -u elastic:changeme --cacert tls/certs/ca/ca.crt 'https://es01.yuchi.lab:9220/_cluster/health?pretty=true'
+{
+  "cluster_name" : "docker-cluster",
+  "status" : "green",
+  "timed_out" : false,
+  "number_of_nodes" : 3,
+  "number_of_data_nodes" : 3,
+  "active_primary_shards" : 8,
+  "active_shards" : 16,
+  "relocating_shards" : 0,
+  "initializing_shards" : 0,
+  "unassigned_shards" : 0,
+  "delayed_unassigned_shards" : 0,
+  "number_of_pending_tasks" : 0,
+  "number_of_in_flight_fetch" : 0,
+  "task_max_waiting_in_queue_millis" : 0,
+  "active_shards_percent_as_number" : 100.0
+}
+#+END_SRC
+**** 重置内建账户密码 
+在 master 节点所在主机上执行命令:
+
+#+BEGIN_SRC bash 
+NODE_NAME=es01.yuchi.lab NODE_IP=10.11.12.13 \
+sudo -E docker-compose -f docker-compose.yml \
+exec -T elasticsearch bin/elasticsearch-setup-passwords auto \
+--batch --url https://localhost:9200
+#+END_SRC
+
+#+BEGIN_SRC plaintext
+Changed password for user apm_system
+PASSWORD apm_system = 4QHu6U58oH3Uz9dEYbQa
+
+Changed password for user kibana
+PASSWORD kibana = rGPTCtn2B3uUJbyMc79y
+
+Changed password for user logstash_system
+PASSWORD logstash_system = DzNT28wMiPjAOPuSQUBV
+
+Changed password for user beats_system
+PASSWORD beats_system = 8xHjc6eMIIDP8dj3KLVm
+
+Changed password for user remote_monitoring_user
+PASSWORD remote_monitoring_user = nvgD7uPvHiy86MkAEiPe
+
+Changed password for user elastic
+PASSWORD elastic = l6yM662rGcKKoA3lOxSM
+#+END_SRC
+
+保存好输出的结果.并修改下面三个文件中的 elastic 密码，为后面启动 kibana,logstash 做准备:
+
+- kibana/config/kibana.yml
+- logstash/config/logstash.yml
+- logstash/pipeline/logstash.conf
+**** 启动 kibana
+修改 =docker-compose.yml= 中的 =services.kibana= 部分为:
+#+BEGIN_SRC yaml :hl_lines 11-14,15-17,22-23
+  kibana:
+    build:
+      context: kibana/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+      - type: bind
+        source: ./tls/certs
+        target: $CERTS_DIR
+        read_only: true
+    environment:
+      ELASTICSEARCH_HOSTS: "https://es01.yuchi.lab:9220"
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: "${CERTS_DIR}/ca/ca.crt"
+    ports:
+      - "5600:5600"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+#+END_SRC
+
+- 11-14 行将证书挂载到容器里
+- 15-17 行指定 elasticsearch 地址使用 HTTPS 协议，并指定 CA 证书的路径
+  - =ELASTICSEARCH_HOSTS= 可以使用逗号分割写多个地址
+  - 如果 elasticsearch 与 kibana 不运行在同一台主机上，需要删除 22-23 行
+
+然后到 master 节点所在主机上执行:
+#+BEGIN_SRC bash
+NODE_NAME=es01.yuchi.lab NODE_IP=10.11.12.13 \
+sudo -E docker-compose -f docker-compose.yml up --build kibana
+#+END_SRC
+
+启动成功时，终端里输出:
+#+BEGIN_SRC plaintext
+...
+kibana_1         | {"type":"log","@timestamp":"2020-05-27T12:11:20Z","tags":["info","http","server","Kibana"],"pid":6,"message":"http server running at http://0:5601"}
+...
+#+END_SRC
+**** 启动 logstash
+修改 =logstash/config/logstash.yaml=:
+#+BEGIN_SRC yaml
+# 修改 ES 地址
+xpack.monitoring.elasticsearch.hosts: [ "https://es01.yuchi.lab:9220" ]
+
+# 添加 CA 证书配置
+xpack.monitoring.elasticsearch.ssl.certificate_authority: "${LS_CACERT_FILE}"
+#+END_SRC
+
+修改 =logstash/pipeline/logstash.conf= 中的 output 部分为: 
+#+BEGIN_SRC plaintext
+output {
+	elasticsearch {
+		hosts => "https://es01.yuchi.lab:9220"
+		cacert => "${LS_CACERT_FILE}"
+		user => "elastic"
+		password => "real-password"
+	}
+}
+#+END_SRC
+
+修改 =docker-compose.yml= 中的 =services.logstash= (高亮的部分):
+#+BEGIN_SRC yaml :hl_lines 4-7,10
+  logstash:
+    volumes:
+      ...
+      - type: bind
+        source: ./tls/certs
+        target: $CERTS_DIR
+        read_only: true
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      LS_CACERT_FILE: "${CERTS_DIR}/ca/ca.crt"
+    ...
+#+END_SRC
+
+再执行启动命令即可:
+#+BEGIN_SRC bash
+NODE_NAME=es01.yuchi.lab NODE_IP=10.11.12.13 \
+sudo -E docker-compose -f docker-compose.yml up --build logstash
+#+END_SRC
+
+**** 注入测试数据
+ 把 =/var/log/kern.log= 通过 logstash 注入到集群中:
+ #+BEGIN_SRC bash
+ sudo cat /var/log/kern.log | nc -c localhost 5000
+ #+END_SRC
+
+ 登录 kibana,在 =Settings.Kibana.Index Patterns= 页面，新建 =logstash*= pattern, 再回到 kibana 首页就可以看到数据了。
+
+ #+begin_gallery
+ #+attr_html: :alt kibana create index pattern
+ [[file:images/es/kibana-create-pattern.png]] 
+
+ #+attr_html: :alt kibana data
+ [[file:images/es/kibana-data.png]]
+
+ #+end_gallery
+
+*** 完整配置
+上述修改后的完整配置放在 [[https://github.com/wych42/docker-elk/tree/prod-demo][Github]].
+
+以上。

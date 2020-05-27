@@ -19,6 +19,13 @@ enableGitInfo = true
 # PygmentsOptions = "linenos=table"
 
 [markup]
+  defaultMarkdownHandler = "blackfriday"
+  [markup.blackfriday]
+  hrefTargetBlank = true
+  noreferrerLinks = true
+  angledQuotes = true
+  fractions = false
+  plainIDAnchors = true
   [markup.tableOfContents]
     endLevel = 4
     ordered = false
@@ -73,13 +80,6 @@ enableGitInfo = true
 [author]
   name = "chi"
 
-[blackfriday]
-  hrefTargetBlank = true
-  noreferrerLinks = true
-  angledQuotes = true
-  fractions = false
-  plainIDAnchors = true
-  extensions = ["hardLineBreak"]
 
 [menu]
   [[menu.main]]
