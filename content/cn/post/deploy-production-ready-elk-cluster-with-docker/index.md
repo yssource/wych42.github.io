@@ -1,7 +1,7 @@
 +++
 title = "使用 docker 部署一个生产环境可用的 ELK 集群"
 date = 2020-05-27T22:58:00+08:00
-lastmod = 2020-05-27T23:00:03+08:00
+lastmod = 2020-05-27T23:02:32+08:00
 tags = ["elasticsearch", "docker", "tls"]
 categories = ["Post"]
 draft = false
@@ -31,7 +31,7 @@ toc = true
 -   docker-elk 项目的用法
 -   elasticsearch 的基本概念
 
-如果还不熟悉，可以跟着开头体文章操作一次。
+如果还不熟悉，可以跟着开头提及的文章操作一次。
 
 
 ### 节点规划 {#节点规划}
