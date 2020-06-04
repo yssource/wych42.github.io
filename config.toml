@@ -1,6 +1,6 @@
 baseURL = "https://yuchi.me/"
 title = "Chi's Journal"
-theme = "jane"
+theme = "diary"
 enableEmoji = true
 
 hasCJKLanguage = true

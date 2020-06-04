@@ -12,3 +12,4 @@
 [submodule "themes/diary"]
 	path = themes/diary
 	url = git@github.com:wych42/hugo-theme-diary.git
+    branch = wych42
