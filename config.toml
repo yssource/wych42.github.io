@@ -4,12 +4,12 @@ theme = "jane"
 enableEmoji = true
 
 hasCJKLanguage = true
-languageCode = "zh-cn"
-defaultContentLanguage = "zh-cn"
+languageCode = "zh"
+defaultContentLanguage = "zh"
 
 googleAnalytics = "UA-164155675-1"
 disqusShortname = "chis-journal"
-paginate = 5
+paginate = 10
 
 enableGitInfo = true
 
@@ -35,14 +35,14 @@ enableGitInfo = true
     guessSyntax = false
     hl_Lines = ""
     lineNoStart = 1
-    lineNos = true
+    lineNos = false
     lineNumbersInTable = true
     noClasses = false
-    style = "solarized-light"
+    style = "perldoc"
     tabWidth = 4
 
 [languages]
-  [languages.zh-CN]
+  [languages.zh]
     weight = 2
     languageName = "简体中文"
     contentDir = "content/cn"
@@ -57,7 +57,7 @@ enableGitInfo = true
   rssFullContent = true   
   mainSections = ["post"]
 
-  description = "- Ecclesiastes 1.11"
+  subtitle = "- Ecclesiastes 1.11"
 
   archive-paginate = 20
   dateFormatToUse = "2006/01/02"
@@ -65,17 +65,11 @@ enableGitInfo = true
   toc = true              
   photoswipe = true         
 
-  favicon = "static/img/favicon.ico"
+  favicon = "/static/img/favicon.ico"
   truncateSummary = false
-  selfHosted = true
-  poweredBy = 'Written with <a target="_blank" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" href="https://orgmode.org/">Org-mode</a>. Rendered by <a target="_blank" href="https://gohugo.io">Hugo</a> and <a target="_blank" href="https://github.com/wych42/calico-zen/">calico-zen</a>.'
+  poweredBy = 'Written with <a target="_blank" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" href="https://orgmode.org/">Org-mode</a>. <br> Rendered by <a target="_blank" href="https://gohugo.io">Hugo</a> and <a href="https://github.com/amazingrise/hugo-theme-diary">Diary</a>.<br>Converted by <a target="_blank" href="https://ox-hugo.scripter.co/">ox-hugo</a>.'
+  linksTwitter = "https://twitter.com/wych42"
 
-  disable_codefolding = false
-  codefolding_show = "hide"
-  codefolding_nobutton = false
-
-  # customCSS = ["styles.css"]
-  # customJS = ["scripts.js"]
 
 [author]
   name = "chi"
