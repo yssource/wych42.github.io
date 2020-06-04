@@ -8,7 +8,6 @@ languageCode = "zh"
 defaultContentLanguage = "zh"
 
 googleAnalytics = "UA-164155675-1"
-disqusShortname = "chis-journal"
 paginate = 10
 
 enableGitInfo = true
@@ -88,7 +87,6 @@ enableGitInfo = true
 
   subtitle = "- Ecclesiastes 1.11"
 
-  archive-paginate = 20
   dateFormatToUse = "2006/01/02"
   showMenuLanguageChooser = true
   toc = true              
@@ -96,9 +94,11 @@ enableGitInfo = true
 
   favicon = "/favicon.png"
   truncateSummary = false
-  poweredBy = 'Written with <a target="_blank" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" href="https://orgmode.org/">Org-mode</a>. <br> Rendered by <a target="_blank" href="https://gohugo.io">Hugo</a> and <a href="https://github.com/amazingrise/hugo-theme-diary">Diary</a>.<br>Converted by <a target="_blank" href="https://ox-hugo.scripter.co/">ox-hugo</a>.'
+  poweredBy = 'Written with <a target="_blank" rel="noreferrer noopener" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" rel="noreferrer noopener" href="https://orgmode.org/">Org-mode</a>. <br> Rendered by <a target="_blank" rel="noreferrer noopener" href="https://gohugo.io">Hugo</a>.<br> Theme <a target="_blank" rel="noreferrer noopener" href="https://github.com/amazingrise/hugo-theme-diary">Diary</a>(Modified).<br>Converted by <a target="_blank" rel="noreferrer noopener" href="https://ox-hugo.scripter.co/">ox-hugo</a>.'
   linksTwitter = "https://twitter.com/wych42"
 
+
+  disqusShortname = "chis-journal"
 
 [author]
   name = "chi"
