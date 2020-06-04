@@ -1,11 +1,12 @@
 +++
 title = "Org-mode 导出中文 PDF"
 date = 2020-04-20T18:50:00+08:00
-lastmod = 2020-04-21T19:59:31+08:00
+lastmod = 2020-06-04T12:38:21+08:00
 tags = ["emacs", "latex", "pdf"]
 categories = ["Post"]
 draft = false
 toc = true
+featured_image = "/images/featured/orgmode-to-pdf.png"
 +++
 
 目前在用的 emacs 配置基于 [redguardtoo/emacs.d](https://github.com/redguardtoo/emacs.d) 修改而来。

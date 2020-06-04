@@ -46,10 +46,39 @@ enableGitInfo = true
     weight = 2
     languageName = "简体中文"
     contentDir = "content/cn"
+  # [[languages.zh.menu.main]]
+  #   name = "笔记"
+  #   url = "/verse/"
+  #   weight = "-20"
+
+  [[languages.zh.menu.main]]
+    name = "归档"
+    url = "/post/"
+    weight = "-20"
+
+  [[languages.zh.menu.main]]
+    name = "标签"
+    url = "/tags/"
+    weight = "-10"
+
   [languages.en]
     weight = 1
     languageName = "English"
     contentDir = "content/en"
+  [[languages.en.menu.main]]
+    name = "Notes"
+    url = "/en/verse"
+    weight = "-20"
+
+  [[languages.en.menu.main]]
+    name = "Archive"
+    url = "/en/post"
+    weight = "-20"
+
+  [[languages.en.menu.main]]
+    name = "Tags"
+    url = "/en/tags"
+    weight = "-10"
 
 [params]
   since = "2018"
@@ -65,7 +94,7 @@ enableGitInfo = true
   toc = true              
   photoswipe = true         
 
-  favicon = "/static/img/favicon.ico"
+  favicon = "/favicon.png"
   truncateSummary = false
   poweredBy = 'Written with <a target="_blank" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" href="https://orgmode.org/">Org-mode</a>. <br> Rendered by <a target="_blank" href="https://gohugo.io">Hugo</a> and <a href="https://github.com/amazingrise/hugo-theme-diary">Diary</a>.<br>Converted by <a target="_blank" href="https://ox-hugo.scripter.co/">ox-hugo</a>.'
   linksTwitter = "https://twitter.com/wych42"
@@ -73,36 +102,3 @@ enableGitInfo = true
 
 [author]
   name = "chi"
-
-
-[menu]
-  [[menu.main]]
-    name = "Home"
-    url = "/"
-    pre = "<i class='icon-home'></i>"
-    weight = "-99"
-  
-  [[menu.main]]
-    name = "Verse"
-    url = "/verse/"
-    pre = "<i class='icon-folder-open-alt'></i>"
-    weight = "-20"
-
-  [[menu.main]]
-    name = "Archive"
-    url = "/post/"
-    pre = "<i class='icon-folder-open-alt'></i>"
-    weight = "-20"
-
-   [[menu.main]]
-    name = "Tags"
-    url = "/tags"
-    pre = "<i class='icon-tags'></i>"
-    weight = "-10"
-
-  [[menu.main]]
-    name = "RSS"
-    url = "/index.xml"
-    pre = "<i class='icon-rss'></i>"
-    weight = "0"
- 

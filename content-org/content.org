@@ -614,6 +614,7 @@ bean-file yc.import ${PWD}/documents.tmp -o documents
    :EXPORT_FILE_NAME: index.md
    :EXPORT_DATE: [2020-04-20 Mon 18:14]
    :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
+   :EXPORT_HUGO_CUSTOM_FRONT_MATTER+: :featured_image /images/featured/orgmode-to-pdf.png
    :END:
 
 目前在用的 emacs 配置基于 [[https://github.com/redguardtoo/emacs.d][redguardtoo/emacs.d]] 修改而来。
@@ -685,6 +686,7 @@ brew install pygments
    :EXPORT_FILE_NAME: index.md
    :EXPORT_DATE: [2020-05-19 Tue 17:03]
    :EXPORT_HUGO_CUSTOM_FRONT_MATTER: :toc true
+   :EXPORT_HUGO_CUSTOM_FRONT_MATTER+: :featured_image /images/featured/elasticsearch-logo.png
    :END:
    
 近日在网上冲浪的时候，看到 soulteary 同学撰写的 [[https://soulteary.com/2020/05/04/use-docker-to-build-elk-environment.html][使用 Docker 搭建 ELK 环境]]，发现文中提及的 [[https://github.com/deviantony/docker-elk][docker-elk]] 项目. 

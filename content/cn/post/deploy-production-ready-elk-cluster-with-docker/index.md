@@ -1,11 +1,12 @@
 +++
 title = "使用 docker 部署一个生产环境可用的 ELK 集群"
 date = 2020-05-27T22:58:00+08:00
-lastmod = 2020-05-27T23:04:01+08:00
+lastmod = 2020-06-04T11:55:59+08:00
 tags = ["elasticsearch", "docker", "tls"]
 categories = ["Post"]
 draft = false
 toc = true
+featured_image = "/images/elasticsearch-logo.png"
 +++
 
 近日在网上冲浪的时候，看到 soulteary 同学撰写的 [使用 Docker 搭建 ELK 环境](https://soulteary.com/2020/05/04/use-docker-to-build-elk-environment.html)，发现文中提及的 [docker-elk](https://github.com/deviantony/docker-elk) 项目.
