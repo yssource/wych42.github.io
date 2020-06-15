@@ -10,7 +10,7 @@ defaultContentLanguage = "zh"
 googleAnalytics = "UA-164155675-1"
 paginate = 10
 
-enableGitInfo = true
+disqusShortname = "chis-journal"
 
 # PygmentsCodeFences = true # Enable syntax highlighting with GitHub flavoured code fences
 # # PygmentsUseClasses = true # Use CSS classes to format highlighted code
@@ -96,8 +96,6 @@ enableGitInfo = true
   truncateSummary = false
   poweredBy = 'Written with <a target="_blank" rel="noreferrer noopener" href="https://www.gnu.org/software/emacs/">Emacs</a> and <a target="_blank" rel="noreferrer noopener" href="https://orgmode.org/">Org-mode</a>. <br> Rendered by <a target="_blank" rel="noreferrer noopener" href="https://gohugo.io">Hugo</a>.<br> Theme <a target="_blank" rel="noreferrer noopener" href="https://github.com/amazingrise/hugo-theme-diary">Diary</a>(Modified).<br>Converted by <a target="_blank" rel="noreferrer noopener" href="https://ox-hugo.scripter.co/">ox-hugo</a>.'
   linksTwitter = "https://twitter.com/wych42"
-
-
   disqusShortname = "chis-journal"
 
 [author]
