@@ -1,0 +1,866 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Chi's Journal</title><link>https://yuchi.me/</link><description>Recent content on Chi's Journal</description><generator>Hugo -- gohugo.io</generator><language>zh</language><lastBuildDate>Wed, 27 May 2020 22:58:00 +0800</lastBuildDate><atom:link href="https://yuchi.me/index.xml" rel="self" type="application/rss+xml"/><item><title>使用 docker 部署一个生产环境可用的 ELK 集群</title><link>https://yuchi.me/post/deploy-production-ready-elk-cluster-with-docker/</link><pubDate>Wed, 27 May 2020 22:58:00 +0800</pubDate><guid>https://yuchi.me/post/deploy-production-ready-elk-cluster-with-docker/</guid><description>Chi's Journal https://yuchi.me/post/deploy-production-ready-elk-cluster-with-docker/ -
+&lt;p>近日在网上冲浪的时候，看到 soulteary 同学撰写的 &lt;a href="https://soulteary.com/2020/05/04/use-docker-to-build-elk-environment.html" rel="noreferrer" target="_blank">使用 Docker 搭建 ELK 环境&lt;/a>，发现文中提及的 &lt;a href="https://github.com/deviantony/docker-elk" rel="noreferrer" target="_blank">docker-elk&lt;/a> 项目.
+与我自行维护用于部署生产环境 ELK 集群的项目, 在代码结构上十分相似。便将本地项目迁移到 docker-elk, 并向上游项目发了一个针对开启 TLS 的 &lt;a href="https://github.com/deviantony/docker-elk/pulls" rel="noreferrer" target="_blank">Patch&lt;/a>.
+顺便针对在生产环境部署多主机节点集群、开启 TLS 加密通信做一个详细的介绍。&lt;/p>
+&lt;p>本文将会涉及到：&lt;/p>
+&lt;ul>
+&lt;li>基于 &lt;a href="https://github.com/deviantony/docker-elk" rel="noreferrer" target="_blank">docker-elk&lt;/a> 项目进行部署操作，避免重复造轮子&lt;/li>
+&lt;li>用三个主机节点组成 elasticsearch 集群&lt;/li>
+&lt;li>集群内部使用自签名的 TLS 证书通信&lt;/li>
+&lt;li>kibana, logstash 与 elasticsearch 集群的通信开启 TLS 加密&lt;/li>
+&lt;/ul>
+&lt;h2 id="准备工作">准备工作&lt;/h2>
+&lt;h3 id="熟悉-docker-和-docker-elk-项目">熟悉 docker 和 docker-elk 项目&lt;/h3>
+&lt;p>后续假设读者已经熟悉:&lt;/p>
+&lt;ul>
+&lt;li>docker/docker-compose 的基本用法&lt;/li>
+&lt;li>docker-elk 项目的用法&lt;/li>
+&lt;li>elasticsearch 的基本概念&lt;/li>
+&lt;/ul>
+&lt;p>如果还不熟悉，可以跟着开头提及的文章操作一次。&lt;/p>
+&lt;h3 id="节点规划">节点规划&lt;/h3>
+&lt;h4 id="节点">节点&lt;/h4>
+&lt;p>本文将使用三个主机节点部署 elasticsearch 集群, 三个节点在同一个内网中，并且可以互相连接:&lt;/p>
+&lt;ul>
+&lt;li>节点A: 主机名: &lt;code>es01.yuchi.lab&lt;/code>, IP: &lt;code>10.11.12.13&lt;/code>&lt;/li>
+&lt;li>节点B: 主机名: &lt;code>es02.yuchi.lab&lt;/code>, IP: &lt;code>10.11.12.14&lt;/code>&lt;/li>
+&lt;li>节点C: 主机名: &lt;code>es03.yuchi.lab&lt;/code>, IP: &lt;code>10.11.12.15&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>备注:&lt;/p>
+&lt;ul>
+&lt;li>节点A作为 master 节点使用&lt;/li>
+&lt;li>主机名将作为环境变量 NODE_NAME，在后文使用&lt;/li>
+&lt;/ul>
+&lt;h4 id="端口">端口&lt;/h4>
+&lt;p>所有 elasticsearch 实例，在主机上暴露的端口修改为:&lt;/p>
+&lt;ul>
+&lt;li>http: 9220(默认 9200)&lt;/li>
+&lt;li>tcp: 9320(默认 9300)&lt;/li>
+&lt;/ul>
+&lt;p>以方便在已经部署了 elasticsearch 示例的设备上测试。&lt;/p>
+&lt;h4 id="数据目录">数据目录&lt;/h4>
+&lt;ul>
+&lt;li>es 数据存储在 &lt;code>/data/es/${NODE_NAME}-data/&lt;/code> 目录&lt;/li>
+&lt;li>es 日志存储在 &lt;code>/data/es/${NODE_NAME}-log/&lt;/code> 目录&lt;/li>
+&lt;/ul>
+&lt;p>可以在各个节点上保存并执行下面的脚本:&lt;/p>
+&lt;p>&lt;a id="code-snippet--prepare-dir.sh">&lt;/a>&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="cp">#!/bin/bash
+&lt;/span>&lt;span class="cp">&lt;/span>
+&lt;span class="k">if&lt;/span> &lt;span class="o">[[&lt;/span> &lt;span class="s2">&amp;#34;x&lt;/span>&lt;span class="nv">$1&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s2">&amp;#34;x&amp;#34;&lt;/span> &lt;span class="o">]]&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">then&lt;/span>
+&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;need param as NODE_NAME&amp;#34;&lt;/span>
+&lt;span class="nb">exit&lt;/span> &lt;span class="m">1&lt;/span>
+&lt;span class="k">fi&lt;/span>
+&lt;span class="nb">export&lt;/span> &lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="nv">$1&lt;/span>
+&lt;span class="nv">dataDir&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;/data/es/&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">-data/&amp;#34;&lt;/span>
+&lt;span class="nv">logDir&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;/data/es/&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">-log/&amp;#34;&lt;/span>
+sudo mkdir &lt;span class="nv">$dataDir&lt;/span> -p
+sudo mkdir &lt;span class="nv">$logDir&lt;/span> -p
+sudo chmod g+rwx &lt;span class="nv">$dataDir&lt;/span>
+sudo chmod g+rwx &lt;span class="nv">$logDir&lt;/span>
+sudo chgrp &lt;span class="m">1000&lt;/span> &lt;span class="nv">$dataDir&lt;/span>
+sudo chgrp &lt;span class="m">1000&lt;/span> &lt;span class="nv">$logDir&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>然后执行(替换 NODE_NAME 为真实的主机名):&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">sudo bash prepare_dir.sh NODE_NAME&lt;/code>&lt;/pre>&lt;/div>
+&lt;h2 id="准备配置">准备配置&lt;/h2>
+&lt;h3 id="准备自签名证书">准备自签名证书&lt;/h3>
+&lt;p>生成证书在本地执行.&lt;/p>
+&lt;div class="shortcode-notice warning">
+&lt;div class="shortcode-notice-title warning">
+warning
+&lt;/div>
+&lt;p>不要将证书文件添加到 git 仓库中。&lt;/p>
+&lt;p>&lt;/div>&lt;/p>
+&lt;h4 id="修改配置文件">修改配置文件&lt;/h4>
+&lt;p>进入本地的 docker-elk 目录，添加下面的文件:&lt;/p>
+&lt;p>&lt;a id="code-snippet--create-cert.yml">&lt;/a>&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">version&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;3.2&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">&lt;/span>&lt;span class="k">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">create_ca&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">container_name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>create_ca&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>docker.elastic.co/elasticsearch/elasticsearch&lt;span class="p">:&lt;/span>${ELK_VERSION}&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">command&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="sd">&amp;gt;
+&lt;/span>&lt;span class="sd"> bash -c &amp;#39;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>yum&lt;span class="w"> &lt;/span>install&lt;span class="w"> &lt;/span>-y&lt;span class="w"> &lt;/span>-q&lt;span class="w"> &lt;/span>-e&lt;span class="w"> &lt;/span>&lt;span class="m">0&lt;/span>&lt;span class="w"> &lt;/span>unzip;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>if&lt;span class="w"> &lt;/span>&lt;span class="p">[[&lt;/span>&lt;span class="w"> &lt;/span>!&lt;span class="w"> &lt;/span>-f&lt;span class="w"> &lt;/span>/certs/ca.zip&lt;span class="w"> &lt;/span>&lt;span class="p">]]&lt;/span>;&lt;span class="w"> &lt;/span>then&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>bin/elasticsearch-certutil&lt;span class="w"> &lt;/span>ca&lt;span class="w"> &lt;/span>--ca-dn&lt;span class="w"> &lt;/span>${CA_DN}&lt;span class="w"> &lt;/span>--days&lt;span class="w"> &lt;/span>${CA_DAYS}&lt;span class="w"> &lt;/span>--pass&lt;span class="w"> &lt;/span>${CA_PASSWORD}&lt;span class="w"> &lt;/span>--pem&lt;span class="w"> &lt;/span>--out&lt;span class="w"> &lt;/span>/certs/ca.zip;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>unzip&lt;span class="w"> &lt;/span>/certs/ca.zip&lt;span class="w"> &lt;/span>-d&lt;span class="w"> &lt;/span>/certs;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>fi;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>chown&lt;span class="w"> &lt;/span>-R&lt;span class="w"> &lt;/span>&lt;span class="m">1000&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="m">0&lt;/span>&lt;span class="w"> &lt;/span>/certs&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s1">&amp;#39;
+&lt;/span>&lt;span class="s1"> user: &amp;#34;0&amp;#34;
+&lt;/span>&lt;span class="s1"> working_dir: /usr/share/elasticsearch
+&lt;/span>&lt;span class="s1"> volumes:
+&lt;/span>&lt;span class="s1"> [
+&lt;/span>&lt;span class="s1"> &amp;#34;./tls/certs:/certs&amp;#34;,
+&lt;/span>&lt;span class="s1"> &amp;#34;./tls:/usr/share/elasticsearch/config/certificates&amp;#34;,
+&lt;/span>&lt;span class="s1"> ]
+&lt;/span>&lt;span class="s1">
+&lt;/span>&lt;span class="s1"> create_certs:
+&lt;/span>&lt;span class="s1"> container_name: create_certs
+&lt;/span>&lt;span class="s1"> image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
+&lt;/span>&lt;span class="s1"> command: &amp;gt;
+&lt;/span>&lt;span class="s1"> bash -c &amp;#39;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>yum&lt;span class="w"> &lt;/span>install&lt;span class="w"> &lt;/span>-y&lt;span class="w"> &lt;/span>-q&lt;span class="w"> &lt;/span>-e&lt;span class="w"> &lt;/span>&lt;span class="m">0&lt;/span>&lt;span class="w"> &lt;/span>unzip;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>if&lt;span class="w"> &lt;/span>&lt;span class="p">[[&lt;/span>&lt;span class="w"> &lt;/span>!&lt;span class="w"> &lt;/span>-f&lt;span class="w"> &lt;/span>/certs/bundle.zip&lt;span class="w"> &lt;/span>&lt;span class="p">]]&lt;/span>;&lt;span class="w"> &lt;/span>then&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>bin/elasticsearch-certutil&lt;span class="w"> &lt;/span>cert&lt;span class="w"> &lt;/span>--ca-cert&lt;span class="w"> &lt;/span>/certs/ca/ca.crt&lt;span class="w"> &lt;/span>--ca-key&lt;span class="w"> &lt;/span>/certs/ca/ca.key&lt;span class="w"> &lt;/span>--ca-pass&lt;span class="w"> &lt;/span>${CA_PASSWORD}&lt;span class="w"> &lt;/span>--pem&lt;span class="w"> &lt;/span>--in&lt;span class="w"> &lt;/span>config/certificates/instances.yml&lt;span class="w"> &lt;/span>-out&lt;span class="w"> &lt;/span>/certs/bundle.zip;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>unzip&lt;span class="w"> &lt;/span>/certs/bundle.zip&lt;span class="w"> &lt;/span>-d&lt;span class="w"> &lt;/span>/certs;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>fi;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>chown&lt;span class="w"> &lt;/span>-R&lt;span class="w"> &lt;/span>&lt;span class="m">1000&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="m">0&lt;/span>&lt;span class="w"> &lt;/span>/certs&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&amp;#39;&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">user&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;0&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">working_dir&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>/usr/share/elasticsearch&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;./tls/certs:/certs&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;./tls:/usr/share/elasticsearch/config/certificates&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">]&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>&lt;a id="code-snippet--tls-instances.yml">&lt;/a>&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">instances&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="k">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>es01.yuchi.lab&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">dns&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- es01.yuchi.lab&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- localhost&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- es01&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">ip&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="m">127.0.0.1&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="m">10.11.12.13&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="k">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>es02.yuchi.lab&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">dns&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- es02.yuchi.lab&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- localhost&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- es02&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">ip&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="m">127.0.0.1&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="m">10.11.12.14&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="k">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>es03.yuchi.lab&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">dns&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- es03.yuchi.lab&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- localhost&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- es03&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">ip&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="m">127.0.0.1&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="m">10.11.12.15&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>在 .env 文件中添加 CA 证书相关的信息:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext"># self-sign tls
+CA_PASSWORD=ChangeMe
+CA_DN=&amp;#34;CN=Elastic Certificate Tool Autogenerated CA&amp;#34;
+CA_DAYS=3650&lt;/code>&lt;/pre>&lt;/div>
+&lt;h4 id="生成证书">生成证书&lt;/h4>
+&lt;p>先执行命令生成 CA:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">docker-compose -f create_cert.yml run --rm create_ca&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>会在 &lt;code>tls/certs/&lt;/code> 目录下生成 CA 文件：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext">tls/certs/
+├── ca
+│   ├── ca.crt
+│   └── ca.key
+├── ca.zip&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>再使用 &lt;code>tls/instances.yml&lt;/code> 文件生成每个节点的证书:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">docker-compose -f create_cert.yml run --rm create_certs&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>最终 &lt;code>tls/certs/&lt;/code> 目录里的文件结构如下:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext">tls/certs/
+├── bundle.zip
+├── ca
+│   ├── ca.crt
+│   └── ca.key
+├── ca.zip
+├── es01.yuchi.lab
+│   ├── es01.yuchi.lab.crt
+│   └── es01.yuchi.lab.key
+├── es02.yuchi.lab
+│   ├── es02.yuchi.lab.crt
+│   └── es02.yuchi.lab.key
+└── es03.yuchi.lab
+├── es03.yuchi.lab.crt
+└── es03.yuchi.lab.key&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="更新-docker-compose-配置">更新 docker-compose 配置&lt;/h3>
+&lt;h4 id="volume-配置">volume 配置&lt;/h4>
+&lt;p>如开头所说，我们会将数据和日志保存在主机上的 &lt;code>/data/es/${NODE_NAME}-{data,log}&lt;/code> 目录中，需要更新 &lt;code>docker-compose.yml&lt;/code> 中的 &lt;code>volumes&lt;/code> 部分为:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">esdata01&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">driver&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>local&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">driver_opts&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>none&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">o&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>bind&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">device&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s1">&amp;#39;/data/es/${NODE_NAME}-data/&amp;#39;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">eslog01&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">driver&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>local&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">driver_opts&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>none&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">o&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>bind&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">device&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s1">&amp;#39;/data/es/${NODE_NAME}-log/&amp;#39;&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>在 &lt;code>services.elasticsearch.volumes&lt;/code> 中添加配置，高亮的配置在原文件中存在，修改即可:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">elasticsearch&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>...&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>- &lt;span class="k">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>volume&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">source&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>esdata01&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">target&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>/usr/share/elasticsearch/data&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="k">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>volume&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">source&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>eslog01&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">target&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>/usr/share/elasticsearch/logs&lt;/code>&lt;/pre>&lt;/div>
+&lt;h4 id="证书配置">证书配置&lt;/h4>
+&lt;p>在 &lt;code>.env&lt;/code> 文件中添加变量，设置容器内的证书路径(让 docker-compose 显得更整洁):&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext">CERTS_DIR=/usr/share/elasticsearch/config/certificates&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>在 &lt;code>services.elasticsearch.volumes&lt;/code> 中添加配置，挂载证书目录:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">sevices&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">elasticsearch&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>...&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="k">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>bind&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">source&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>./tls/certs&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">target&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>$CERTS_DIR&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">read_only&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="kc">true&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>在 &lt;code>services.elasticsearch.environment&lt;/code> 中添加配置，启用证书:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">sevices&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">elasticsearch&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>...&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">environment&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.enabled&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;true&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.http.ssl.enabled&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;true&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.http.ssl.key&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>${CERTS_DIR}/${NODE_NAME}/${NODE_NAME}.key&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.http.ssl.certificate_authorities&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>${CERTS_DIR}/ca/ca.crt&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.http.ssl.certificate&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>${CERTS_DIR}/${NODE_NAME}/${NODE_NAME}.crt&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.transport.ssl.enabled&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;true&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.transport.ssl.verification_mode&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>certificate&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.transport.ssl.certificate&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>${CERTS_DIR}/${NODE_NAME}/${NODE_NAME}.crt&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.transport.ssl.certificate_authorities&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>${CERTS_DIR}/ca/ca.crt&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.transport.ssl.key&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>${CERTS_DIR}/${NODE_NAME}/${NODE_NAME}.key&lt;/code>&lt;/pre>&lt;/div>
+&lt;h4 id="节点和集群配置">节点和集群配置&lt;/h4>
+&lt;p>继续在 &lt;code>services.elasticsearch.environment&lt;/code> 中添加配置:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">sevices&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">elasticsearch&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>...&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">environment&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">node.name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>${NODE_NAME}&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">http.port&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">9200&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">http.publish_port&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">9220&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">network.host&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">0.0.0.0&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">network.publish_host&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>${NODE_IP}&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">transport.tcp.port&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">9300&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">transport.publish_port&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">9320&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">cluster.initial_master_nodes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;es01.yuchi.lab:9320&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">discovery.seed_hosts&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;es01.yuchi.lab:9320&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">xpack.security.enabled&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;true&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>...&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>一些解释：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>publish_port&lt;/code>: 当 elastcisearch 进程监听的端口，与实际被连接的端口不一致时，需要设置 publish_port 配置，比如容器内监听了 9200，主机上公布了 9220，集群内的其他节点就会通过 9220 进行连接&lt;/li>
+&lt;li>&lt;code>publish_host&lt;/code>: 同样适用于容器场景，集群在节点发现时，种子节点会通知其他节点，通过 publish_host 设置的 IP 进行连接&lt;/li>
+&lt;li>&lt;code>initial_master_nodes&lt;/code>, &lt;code>seed_hosts&lt;/code> 都可以使用逗号分割，设置多个&lt;/li>
+&lt;/ul>
+&lt;p>同时，删除这一行:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">sevices&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">elasticsearch&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>...&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">environment&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">discovery.type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>single-node&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;h4 id="调整系统参数">调整系统参数&lt;/h4>
+&lt;p>内存、ulimit 相关参数直接修改 &lt;code>docker-compose.yml&lt;/code> 即可, JVM 内存的具体数值需要根据主机的参数、业务需求和部署规划决定:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">elasticsearch&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>...&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">environment&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">bootstrap.memory_lock&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;true&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">ES_JAVA_OPTS&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;-Xmx2g -Xms2g&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">ulimits&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">memlock&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">soft&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>-&lt;span class="m">1&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">hard&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>-&lt;span class="m">1&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>&lt;code>vm.max_map_count&lt;/code> 需要在主机上修改, 同时，把这一行写入 &lt;code>/etc/sysctl.conf&lt;/code>:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">sysctl -w vm.max_map_count&lt;span class="o">=&lt;/span>&lt;span class="m">262144&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;h4 id="同步配置到各个节点">同步配置到各个节点&lt;/h4>
+&lt;p>将 docker-elk 项目同步到每个节点上。&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">rsync -aPe &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>&lt;span class="s1">&amp;#39;ssh -p{your-ssh-port}&amp;#39;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>--exclude &lt;span class="o">{&lt;/span>&lt;span class="s1">&amp;#39;tls/certs/ca.zip&amp;#39;&lt;/span>, &lt;span class="s1">&amp;#39;tls/certs/bundle.zip&amp;#39;&lt;/span>&lt;span class="o">}&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>../docker-elk/ es01.yuchi.lab:~/docker-elk&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>本文为了方便操作，直接使用 rsync 将整个目录拷贝到目标节点上，在实际生产环境中，可以尝试使用 ansible 等工具进行自动化操作。同时，也可以使用 ansible-vault 加密证书文件，避免明文存储和拷贝。&lt;/p>
+&lt;h2 id="启动集群">启动集群&lt;/h2>
+&lt;h3 id="启动-master-节点">启动 master 节点&lt;/h3>
+&lt;p>前面指定了 &lt;code>es01.yuchi.lab&lt;/code> 作为集群的主节点，先启动这个节点上的服务。ssh 登录到节点上，进入 &lt;code>~/docker-elk&lt;/code> 目录，执行:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="o">=&lt;/span>es01.yuchi.lab &lt;span class="nv">NODE_IP&lt;/span>&lt;span class="o">=&lt;/span>10.11.12.13 sudo -E docker-compose -f docker-compose.yml up elasticsearch&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>终端上的输出，注意观察高亮行的输出内容，表示服务启动成功:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext">Creating volume &amp;#34;docker-elk_esdata01&amp;#34; with local driver
+Creating volume &amp;#34;docker-elk_eslog01&amp;#34; with local driver
+Creating docker-elk_elasticsearch_1 ... done
+Attaching to docker-elk_elasticsearch_1
+elasticsearch_1 | Created elasticsearch keystore in /usr/share/elasticsearch/config
+...
+&lt;span class="hl">elasticsearch_1 | {&amp;#34;type&amp;#34;: &amp;#34;server&amp;#34;, &amp;#34;timestamp&amp;#34;: &amp;#34;2020-05-25T05:24:25,947Z&amp;#34;, &amp;#34;level&amp;#34;: &amp;#34;INFO&amp;#34;, &amp;#34;component&amp;#34;: &amp;#34;o.e.c.r.a.AllocationService&amp;#34;, &amp;#34;cluster.name&amp;#34;: &amp;#34;docker-cluster&amp;#34;, &amp;#34;node.name&amp;#34;: &amp;#34;es01.yuchi.lab&amp;#34;, &amp;#34;message&amp;#34;: &amp;#34;Cluster health status changed from [YELLOW] to [GREEN] (reason: [shards started [[.watcher-history-10-2020.05.25][0]]]).&amp;#34;, &amp;#34;cluster.uuid&amp;#34;: &amp;#34;uNb6qD9kStSiwxPIi9CvUw&amp;#34;, &amp;#34;node.id&amp;#34;: &amp;#34;ofLOlsGZT_OgBfJVyr1I0Q&amp;#34; }&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>接下来，在主机上的另一个终端内，用 &lt;code>curl&lt;/code> 检查节点的状态:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">curl -u elastic:changeme --cacert tls/certs/ca/ca.crt &lt;span class="s1">&amp;#39;https://es01.yuchi.lab:9220/_cluster/health?pretty=true&amp;#39;&lt;/span>
+&lt;span class="o">{&lt;/span>
+&lt;span class="s2">&amp;#34;cluster_name&amp;#34;&lt;/span> : &lt;span class="s2">&amp;#34;docker-cluster&amp;#34;&lt;/span>,
+&lt;span class="hl"> &lt;span class="s2">&amp;#34;status&amp;#34;&lt;/span> : &lt;span class="s2">&amp;#34;green&amp;#34;&lt;/span>,
+&lt;/span> &lt;span class="s2">&amp;#34;timed_out&amp;#34;&lt;/span> : false,
+&lt;span class="s2">&amp;#34;number_of_nodes&amp;#34;&lt;/span> : 1,
+&lt;span class="s2">&amp;#34;number_of_data_nodes&amp;#34;&lt;/span> : 1,
+&lt;span class="s2">&amp;#34;active_primary_shards&amp;#34;&lt;/span> : 5,
+&lt;span class="s2">&amp;#34;active_shards&amp;#34;&lt;/span> : 5,
+&lt;span class="s2">&amp;#34;relocating_shards&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;initializing_shards&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;unassigned_shards&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;delayed_unassigned_shards&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;number_of_pending_tasks&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;number_of_in_flight_fetch&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;task_max_waiting_in_queue_millis&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;active_shards_percent_as_number&amp;#34;&lt;/span> : 100.0
+&lt;span class="o">}&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="启动数据节点--从节点">启动数据节点(从节点)&lt;/h3>
+&lt;p>在另外两个主机上，分别进入 &lt;code>docker-elk&lt;/code> 目录，再执行:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="c1"># on es02&lt;/span>
+&lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="o">=&lt;/span>es02.yuchi.lab &lt;span class="nv">NODE_IP&lt;/span>&lt;span class="o">=&lt;/span>10.11.12.14 sudo -E docker-compose -f docker-compose.tls.yml up elasticsearch
+&lt;span class="c1"># on es03&lt;/span>
+&lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="o">=&lt;/span>es03.yuchi.lab &lt;span class="nv">NODE_IP&lt;/span>&lt;span class="o">=&lt;/span>10.11.12.15 sudo -E docker-compose -f docker-compose.tls.yml up elasticsearch&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>终端上会输出类似下面的日志：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext">...
+elasticsearch_1 | {&amp;#34;type&amp;#34;: &amp;#34;server&amp;#34;, &amp;#34;timestamp&amp;#34;: &amp;#34;2020-05-26T02:27:45,263Z&amp;#34;, &amp;#34;level&amp;#34;: &amp;#34;INFO&amp;#34;, &amp;#34;component&amp;#34;: &amp;#34;o.e.b.BootstrapChecks&amp;#34;, &amp;#34;cluster.name&amp;#34;: &amp;#34;docker-cluster&amp;#34;, &amp;#34;node.name&amp;#34;: &amp;#34;es02.yuchi.lab&amp;#34;, &amp;#34;message&amp;#34;: &amp;#34;bound or publishing to a non-loopback address, enforcing bootstrap checks&amp;#34; }
+&lt;span class="hl">elasticsearch_1 | {&amp;#34;type&amp;#34;: &amp;#34;server&amp;#34;, &amp;#34;timestamp&amp;#34;: &amp;#34;2020-05-26T02:27:45,274Z&amp;#34;, &amp;#34;level&amp;#34;: &amp;#34;INFO&amp;#34;, &amp;#34;component&amp;#34;: &amp;#34;o.e.c.c.ClusterBootstrapService&amp;#34;, &amp;#34;cluster.name&amp;#34;: &amp;#34;docker-cluster&amp;#34;, &amp;#34;node.name&amp;#34;: &amp;#34;es02.yuchi.lab&amp;#34;, &amp;#34;message&amp;#34;: &amp;#34;skipping cluster bootstrapping as local node does not match bootstrap requirements: [es01.yuchi.lab]&amp;#34; }
+&lt;/span>elasticsearch_1 | {&amp;#34;type&amp;#34;: &amp;#34;server&amp;#34;, &amp;#34;timestamp&amp;#34;: &amp;#34;2020-05-26T02:27:46,322Z&amp;#34;, &amp;#34;level&amp;#34;: &amp;#34;INFO&amp;#34;, &amp;#34;component&amp;#34;: &amp;#34;o.e.c.s.ClusterApplierService&amp;#34;, &amp;#34;cluster.name&amp;#34;: &amp;#34;docker-cluster&amp;#34;, &amp;#34;node.name&amp;#34;: &amp;#34;es02.yuchi.lab&amp;#34;, &amp;#34;message&amp;#34;: &amp;#34;master node changed {previous [], current [{es01.yuchi.lab}{ofLOlsGZT_OgBfJVyr1I0Q}{2vdYT2RGT92uqH4v8S3duQ}{10.11.12.13}{10.11.12.13:9320}{dilm}{ml.machine_memory=201400594432, ml.max_open_jobs=20, xpack.installed=true}]}, added {{es01.yuchi.lab}{ofLOlsGZT_OgBfJVyr1I0Q}{2vdYT2RGT92uqH4v8S3duQ}{10.11.12.13}{10.11.12.13:9320}{dilm}{ml.machine_memory=201400594432, ml.max_open_jobs=20, xpack.installed=true}}, term: 4, version: 80, reason: ApplyCommitRequest{term=4, version=80, sourceNode={es01.yuchi.lab}{ofLOlsGZT_OgBfJVyr1I0Q}{2vdYT2RGT92uqH4v8S3duQ}{10.11.12.13}{10.11.12.13:9320}{dilm}{ml.machine_memory=201400594432, ml.max_open_jobs=20, xpack.installed=true}}&amp;#34; }
+...&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>此时再次检查集群状态,可以看到节点数量已经变成三个：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">curl -u elastic:changeme --cacert tls/certs/ca/ca.crt &lt;span class="s1">&amp;#39;https://es01.yuchi.lab:9220/_cluster/health?pretty=true&amp;#39;&lt;/span>
+&lt;span class="o">{&lt;/span>
+&lt;span class="s2">&amp;#34;cluster_name&amp;#34;&lt;/span> : &lt;span class="s2">&amp;#34;docker-cluster&amp;#34;&lt;/span>,
+&lt;span class="s2">&amp;#34;status&amp;#34;&lt;/span> : &lt;span class="s2">&amp;#34;green&amp;#34;&lt;/span>,
+&lt;span class="s2">&amp;#34;timed_out&amp;#34;&lt;/span> : false,
+&lt;span class="hl"> &lt;span class="s2">&amp;#34;number_of_nodes&amp;#34;&lt;/span> : 3,
+&lt;/span>&lt;span class="hl"> &lt;span class="s2">&amp;#34;number_of_data_nodes&amp;#34;&lt;/span> : 3,
+&lt;/span> &lt;span class="s2">&amp;#34;active_primary_shards&amp;#34;&lt;/span> : 8,
+&lt;span class="s2">&amp;#34;active_shards&amp;#34;&lt;/span> : 16,
+&lt;span class="s2">&amp;#34;relocating_shards&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;initializing_shards&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;unassigned_shards&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;delayed_unassigned_shards&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;number_of_pending_tasks&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;number_of_in_flight_fetch&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;task_max_waiting_in_queue_millis&amp;#34;&lt;/span> : 0,
+&lt;span class="s2">&amp;#34;active_shards_percent_as_number&amp;#34;&lt;/span> : 100.0
+&lt;span class="o">}&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="重置内建账户密码">重置内建账户密码&lt;/h3>
+&lt;p>在 master 节点所在主机上执行命令:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="o">=&lt;/span>es01.yuchi.lab &lt;span class="nv">NODE_IP&lt;/span>&lt;span class="o">=&lt;/span>10.11.12.13 &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>sudo -E docker-compose -f docker-compose.yml &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>&lt;span class="nb">exec&lt;/span> -T elasticsearch bin/elasticsearch-setup-passwords auto &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>--batch --url https://localhost:9200&lt;/code>&lt;/pre>&lt;/div>&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext">Changed password for user apm_system
+PASSWORD apm_system = 4QHu6U58oH3Uz9dEYbQa
+Changed password for user kibana
+PASSWORD kibana = rGPTCtn2B3uUJbyMc79y
+Changed password for user logstash_system
+PASSWORD logstash_system = DzNT28wMiPjAOPuSQUBV
+Changed password for user beats_system
+PASSWORD beats_system = 8xHjc6eMIIDP8dj3KLVm
+Changed password for user remote_monitoring_user
+PASSWORD remote_monitoring_user = nvgD7uPvHiy86MkAEiPe
+Changed password for user elastic
+PASSWORD elastic = l6yM662rGcKKoA3lOxSM&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>保存好输出的结果.并修改下面三个文件中的 elastic 密码，为后面启动 kibana,logstash 做准备:&lt;/p>
+&lt;ul>
+&lt;li>kibana/config/kibana.yml&lt;/li>
+&lt;li>logstash/config/logstash.yml&lt;/li>
+&lt;li>logstash/pipeline/logstash.conf&lt;/li>
+&lt;/ul>
+&lt;h3 id="启动-kibana">启动 kibana&lt;/h3>
+&lt;p>修改 &lt;code>docker-compose.yml&lt;/code> 中的 &lt;code>services.kibana&lt;/code> 部分为:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">kibana&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">build&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">context&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>kibana/&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">args&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">ELK_VERSION&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>$ELK_VERSION&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="k">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>bind&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">source&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>./kibana/config/kibana.yml&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">target&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>/usr/share/kibana/config/kibana.yml&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">read_only&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="kc">true&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>- &lt;span class="k">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>bind&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">source&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>./tls/certs&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">target&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>$CERTS_DIR&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">read_only&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="kc">true&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">environment&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">ELASTICSEARCH_HOSTS&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;https://es01.yuchi.lab:9220&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;${CERTS_DIR}/ca/ca.crt&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">ports&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- &lt;span class="s2">&amp;#34;5600:5600&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">networks&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>- elk&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">depends_on&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>- elasticsearch&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;ul>
+&lt;li>11-14 行将证书挂载到容器里&lt;/li>
+&lt;li>15-17 行指定 elasticsearch 地址使用 HTTPS 协议，并指定 CA 证书的路径
+&lt;ul>
+&lt;li>&lt;code>ELASTICSEARCH_HOSTS&lt;/code> 可以使用逗号分割写多个地址&lt;/li>
+&lt;li>如果 elasticsearch 与 kibana 不运行在同一台主机上，需要删除 22-23 行&lt;/li>
+&lt;/ul>&lt;/li>
+&lt;/ul>
+&lt;p>然后到 master 节点所在主机上执行:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="o">=&lt;/span>es01.yuchi.lab &lt;span class="nv">NODE_IP&lt;/span>&lt;span class="o">=&lt;/span>10.11.12.13 &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>sudo -E docker-compose -f docker-compose.yml up --build kibana&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>启动成功时，终端里输出:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext">...
+kibana_1 | {&amp;#34;type&amp;#34;:&amp;#34;log&amp;#34;,&amp;#34;@timestamp&amp;#34;:&amp;#34;2020-05-27T12:11:20Z&amp;#34;,&amp;#34;tags&amp;#34;:[&amp;#34;info&amp;#34;,&amp;#34;http&amp;#34;,&amp;#34;server&amp;#34;,&amp;#34;Kibana&amp;#34;],&amp;#34;pid&amp;#34;:6,&amp;#34;message&amp;#34;:&amp;#34;http server running at http://0:5601&amp;#34;}
+...&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="启动-logstash">启动 logstash&lt;/h3>
+&lt;p>修改 &lt;code>logstash/config/logstash.yaml&lt;/code>:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="c"># 修改 ES 地址&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">&lt;/span>&lt;span class="k">xpack.monitoring.elasticsearch.hosts&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;https://es01.yuchi.lab:9220&amp;#34;&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">&lt;/span>&lt;span class="c"># 添加 CA 证书配置&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">&lt;/span>&lt;span class="k">xpack.monitoring.elasticsearch.ssl.certificate_authority&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;${LS_CACERT_FILE}&amp;#34;&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>修改 &lt;code>logstash/pipeline/logstash.conf&lt;/code> 中的 output 部分为:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-plaintext" data-lang="plaintext">output {
+elasticsearch {
+hosts =&amp;gt; &amp;#34;https://es01.yuchi.lab:9220&amp;#34;
+cacert =&amp;gt; &amp;#34;${LS_CACERT_FILE}&amp;#34;
+user =&amp;gt; &amp;#34;elastic&amp;#34;
+password =&amp;gt; &amp;#34;real-password&amp;#34;
+}
+}&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>修改 &lt;code>docker-compose.yml&lt;/code> 中的 &lt;code>services.logstash&lt;/code> (高亮的部分):&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">logstash&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>...&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>- &lt;span class="k">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>bind&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">source&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>./tls/certs&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">target&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>$CERTS_DIR&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">read_only&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="kc">true&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">environment&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">LS_JAVA_OPTS&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;-Xmx256m -Xms256m&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="hl">&lt;span class="w"> &lt;/span>&lt;span class="k">LS_CACERT_FILE&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;${CERTS_DIR}/ca/ca.crt&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;span class="w"> &lt;/span>...&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>再执行启动命令即可:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="nv">NODE_NAME&lt;/span>&lt;span class="o">=&lt;/span>es01.yuchi.lab &lt;span class="nv">NODE_IP&lt;/span>&lt;span class="o">=&lt;/span>10.11.12.13 &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>sudo -E docker-compose -f docker-compose.yml up --build logstash&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="注入测试数据">注入测试数据&lt;/h3>
+&lt;p>把 &lt;code>/var/log/kern.log&lt;/code> 通过 logstash 注入到集群中:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">sudo cat /var/log/kern.log &lt;span class="p">|&lt;/span> nc -c localhost &lt;span class="m">5000&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>登录 kibana,在 &lt;code>Settings.Kibana.Index Patterns&lt;/code> 页面，新建 &lt;code>logstash*&lt;/code> pattern, 再回到 kibana 首页就可以看到数据了。&lt;/p>
+&lt;div
+class="gallery caption-position-bottom caption-effect-slide hover-effect-zoom hover-transition"
+itemscope itemtype="http://schema.org/ImageGallery">
+&lt;link rel="stylesheet" href="https://yuchi.me/vendor/css/hugo-easy-gallery.css" />
+&lt;div
+class="box">
+&lt;figure itemprop="associatedMedia" itemscope
+itemtype="http://schema.org/ImageObject" >
+&lt;div class="img" style="background-image: url('images/es/kibana-create-pattern.png');"
+>
+&lt;img itemprop="thumbnail" src="images/es/kibana-create-pattern.png" alt="kibana create index pattern"
+/>
+&lt;/div>
+&lt;a href="images/es/kibana-create-pattern.png" itemprop="contentUrl">&lt;/a>
+&lt;/figure>
+&lt;/div>
+&lt;div
+class="box">
+&lt;figure itemprop="associatedMedia" itemscope
+itemtype="http://schema.org/ImageObject" >
+&lt;div class="img" style="background-image: url('images/es/kibana-data.png');"
+>
+&lt;img itemprop="thumbnail" src="images/es/kibana-data.png" alt="kibana data"
+/>
+&lt;/div>
+&lt;a href="images/es/kibana-data.png" itemprop="contentUrl">&lt;/a>
+&lt;/figure>
+&lt;/div>
+&lt;/div>
+&lt;h2 id="完整配置">完整配置&lt;/h2>
+&lt;p>上述修改后的完整配置放在 &lt;a href="https://github.com/wych42/docker-elk/tree/prod-demo" rel="noreferrer" target="_blank">Github&lt;/a>.&lt;/p>
+&lt;p>以上。&lt;/p>
+- https://yuchi.me/post/deploy-production-ready-elk-cluster-with-docker/ -</description></item><item><title>Org-mode 导出中文 PDF</title><link>https://yuchi.me/post/export-org-mode-in-chinese-to-pdf-with-custom-latex-class/</link><pubDate>Mon, 20 Apr 2020 18:50:00 +0800</pubDate><guid>https://yuchi.me/post/export-org-mode-in-chinese-to-pdf-with-custom-latex-class/</guid><description>Chi's Journal https://yuchi.me/post/export-org-mode-in-chinese-to-pdf-with-custom-latex-class/ -&lt;p>目前在用的 emacs 配置基于 &lt;a href="https://github.com/redguardtoo/emacs.d" rel="noreferrer" target="_blank">redguardtoo/emacs.d&lt;/a> 修改而来。&lt;/p>
+&lt;p>配置的默认功能有：&lt;/p>
+&lt;ul>
+&lt;li>使用 &lt;a href="https://github.com/ElegantLaTeX/ElegantPaper" rel="noreferrer" target="_blank">ElegantLaTeX/ElegantPaper&lt;/a> 作为默认的导出模板;&lt;/li>
+&lt;li>使用 &lt;a href="https://github.com/gpoore/minted" rel="noreferrer" target="_blank">gpoore/minted&lt;/a> 进行代码高亮;&lt;/li>
+&lt;li>使用 ctex 默认的字体设置;&lt;/li>
+&lt;/ul>
+&lt;p>下载 &lt;a href="https://github.com/ElegantLaTeX/ElegantPaper/blob/master/elegantpaper.cls" rel="noreferrer" target="_blank">elegantpaper.cls&lt;/a> 放到 &lt;code>org&lt;/code> 文档同级目录内。&lt;/p>
+&lt;p>在 &lt;code>~/.custom.el&lt;/code> 里添加配置：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-lisp" data-lang="lisp">&lt;span class="p">(&lt;/span>&lt;span class="nv">with-eval-after-load&lt;/span> &lt;span class="ss">&amp;#39;ox-latex&lt;/span>
+&lt;span class="c1">;; http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export&lt;/span>
+&lt;span class="c1">;; latexmk runs pdflatex/xelatex (whatever is specified) multiple times&lt;/span>
+&lt;span class="c1">;; automatically to resolve the cross-references.&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="k">setq&lt;/span> &lt;span class="nv">org-latex-pdf-process&lt;/span> &lt;span class="o">&amp;#39;&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;latexmk -xelatex -quiet -shell-escape -f %f&amp;#34;&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="nv">add-to-list&lt;/span> &lt;span class="ss">&amp;#39;org-latex-classes&lt;/span>
+&lt;span class="o">&amp;#39;&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;elegantpaper&amp;#34;&lt;/span>
+&lt;span class="s">&amp;#34;\\documentclass[lang=cn]{elegantpaper}
+&lt;/span>&lt;span class="s"> [NO-DEFAULT-PACKAGES]
+&lt;/span>&lt;span class="s"> [PACKAGES]
+&lt;/span>&lt;span class="s"> [EXTRA]&amp;#34;&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\section{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\section*{%s}&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\subsection{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\subsection*{%s}&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\subsubsection{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\subsubsection*{%s}&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\paragraph{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\paragraph*{%s}&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\subparagraph{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\subparagraph*{%s}&amp;#34;&lt;/span>&lt;span class="p">)))&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="k">setq&lt;/span> &lt;span class="nv">org-latex-listings&lt;/span> &lt;span class="ss">&amp;#39;minted&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="nv">add-to-list&lt;/span> &lt;span class="ss">&amp;#39;org-latex-packages-alist&lt;/span> &lt;span class="o">&amp;#39;&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="s">&amp;#34;minted&amp;#34;&lt;/span>&lt;span class="p">)))&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>在 &lt;code>org&lt;/code> 文档的头部添加参数：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-org" data-lang="org">&lt;span class="cs">#+LATEX_COMPILER&lt;/span>&lt;span class="c">: xelatex&lt;/span>
+&lt;span class="cs">#+LATEX_CLASS&lt;/span>&lt;span class="c">: elegantpaper&lt;/span>
+&lt;span class="cs">#+OPTIONS&lt;/span>&lt;span class="c">: prop:t&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>安装 &lt;code>minted&lt;/code> 的依赖:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">brew install pygments&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>之后将光标移动到要导出的 Subtree, &lt;code>C-c C-e C-s l p&lt;/code> 即可。&lt;/p>
+&lt;p>*&lt;strong>&lt;em>参考&lt;/em>&lt;/strong>*&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export" rel="noreferrer" target="_blank">http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://orgmode.org/manual/Export-Settings.html#Export-settings" rel="noreferrer" target="_blank">https://orgmode.org/manual/Export-Settings.html#Export-settings&lt;/a>&lt;/li>
+&lt;/ul>
+- https://yuchi.me/post/export-org-mode-in-chinese-to-pdf-with-custom-latex-class/ -</description></item><item><title>用 slack/nebula 在公网上部署 kubernetes 集群</title><link>https://yuchi.me/post/kubernetes-cross-multiple-cloud-over-nebula/</link><pubDate>Wed, 04 Dec 2019 18:52:00 +0800</pubDate><guid>https://yuchi.me/post/kubernetes-cross-multiple-cloud-over-nebula/</guid><description>Chi's Journal https://yuchi.me/post/kubernetes-cross-multiple-cloud-over-nebula/ -
+&lt;p>这是&lt;a href="https://yuchi.me/deploy-kubernetes-with-kubeadm/">上一篇&lt;/a>的后续，顺带解决更多需求：&lt;/p>
+&lt;ul>
+&lt;li>在不同地区（云厂商）有多台设备, 甚至只在内网的设备（比如家里的 NAS）&lt;/li>
+&lt;li>用一个 kubernetes 集群管理这些设备上的运行的部分服务, 虽然不是好的实践，但是自己用真的方便&lt;/li>
+&lt;li>最好这些机器可以直接互联, 就像都在一个子网里一样&lt;/li>
+&lt;/ul>
+&lt;p>看起来我需要的就是一个搭建 overlay network 的方案，而且没有公网入口（但是有出口）的设备也可加入这个网络。&lt;/p>
+&lt;p>自然就想到了用过的 &lt;a href="https://www.wireguard.com/quickstart/" rel="noreferrer" target="_blank">wireguard&lt;/a> 和 &lt;a href="https://www.tinc-vpn.org/" rel="noreferrer" target="_blank">tinc-vpn&lt;/a>。然而，这俩配置和使用都很麻烦，也主要是用来作 vpn 的，于是就尝试下新项目 &lt;a href="https://github.com/slackhq/nebula" rel="noreferrer" target="_blank">slack/nebula&lt;/a>。&lt;/p>
+&lt;h2 id="安装和配置-nebula">安装和配置 nebula&lt;/h2>
+&lt;p>三台设备：&lt;/p>
+&lt;ul>
+&lt;li>a.host.com, 作为 lighthouse, 公网 IP 1.2.3.4, 组网 IP &lt;code>192.168.100.1/24&lt;/code>&lt;/li>
+&lt;li>b.host.com, 组网 IP &lt;code>192.168.100.2/24&lt;/code>&lt;/li>
+&lt;li>c.host.com, 组网 IP &lt;code>192.168.100.3/24&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;h3 id="安装-nebula">安装 nebula&lt;/h3>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">wget -qO- https://github.com/slackhq/nebula/releases/download/v1.0.0/nebula-linux-amd64.tar.gz &lt;span class="p">|&lt;/span> tar xvf - -C /usr/local/bin&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="生成证书和配置文件">生成证书和配置文件&lt;/h3>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">./nebula-cert ca -name &lt;span class="s2">&amp;#34;calico&amp;#34;&lt;/span>
+./nebula-cert sign -name &lt;span class="s2">&amp;#34;a.host.com&amp;#34;&lt;/span> -ip &lt;span class="s2">&amp;#34;192.168.100.1/24&amp;#34;&lt;/span> -groups &lt;span class="s2">&amp;#34;lighthouse&amp;#34;&lt;/span>
+...&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>配置文件参考&lt;a href="https://github.com/slackhq/nebula#5-configuration-files-for-each-host" rel="noreferrer" target="_blank">文档&lt;/a>设置就行，有几项需要注意：&lt;/p>
+&lt;p>所有设备上：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="c"># 都要注意把本机对应的证书和 *ca.crt* 拷贝到配置文件里写的路径：&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">&lt;/span>&lt;span class="k">pki&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="c"># The CAs that are accepted by this node. Must contain one or more certificates created by &amp;#39;nebula-cert ca&amp;#39;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">ca&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>/etc/nebula/ca.crt&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">cert&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>/etc/nebula/a.host.com.crt&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">key&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>/etc/nebula/a.host.com.key&lt;span class="w">
+&lt;/span>&lt;span class="w">&lt;/span>&lt;span class="c"># 把 lighthouse 的公网 IP 映射加上&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">&lt;/span>&lt;span class="k">static_host_map&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">&amp;#34;192.168.100.1&amp;#34;: &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;1.2.3.4:4242&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>lighthouse 节点上，设置 &lt;code>am_lighthouse: true&lt;/code>,以及 &lt;code>lighthouse.hosts&lt;/code> 留空。&lt;/p>
+&lt;p>其他节点上: &lt;code>lighthouse.hosts&lt;/code> 字段里填上 lighthouse 节点的组网 IP（即 192.168.100.1）。&lt;/p>
+&lt;p>接着把配置文件拷贝到各个节点的 &lt;code>/etc/nebula/config.yaml&lt;/code>&lt;/p>
+&lt;h3 id="运行">运行&lt;/h3>
+&lt;p>nebula 进程没有自带 daemon 模式，就用 supervisor 来运行吧。&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">apt-get install supervisor
+cat &lt;span class="s">&amp;lt;&amp;lt;EOF &amp;gt;/etc/supervisor/conf.d/nebula.conf
+&lt;/span>&lt;span class="s">[program:nebula]
+&lt;/span>&lt;span class="s">command=/usr/local/bin/nebula -config /etc/nebula/config.yaml
+&lt;/span>&lt;span class="s">EOF&lt;/span>
+supervisorctl reload&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>可以再用 &lt;code>supervisorctl status&lt;/code> 看下状态。&lt;/p>
+&lt;h2 id="部署-kubernetes">部署 kubernetes&lt;/h2>
+&lt;p>大体跟上一篇类似。不过这次用 &lt;a href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/" rel="noreferrer" target="_blank">calico&lt;/a> 作 network add-on，因为我真的养了一只 calico-cat。&lt;/p>
+&lt;h3 id="配置-calico">配置 calico&lt;/h3>
+&lt;p>kubeadm 提供的 calico quickstart 命令需要调整，要把 &lt;a href="https://docs.projectcalico.org/v3.8/manifests/calico.yaml" rel="noreferrer" target="_blank">calico.yaml&lt;/a> 下载到机器上修改后使用：&lt;/p>
+&lt;ul>
+&lt;li>calico 默认使用了 &lt;code>192.168.0.0/16&lt;/code> 网段，与 nebula 使用的网段重复，我将文件里的 CALICO_IPV4POOL_CIDR 修改成 &lt;code>192.168.128.0/24&lt;/code>.&lt;/li>
+&lt;li>&lt;p>默认的 autodetection_method 是 first-found，这样可能用不到 nebula 的 IP 地址，文件里没有这个字段，需要新加，修改后长这样：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="k">​- name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>IP&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">value&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;autodetect&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;span class="w">&lt;/span>&lt;span class="k">​- name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>IP_AUTODETECTION_METHOD&lt;span class="w">
+&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">value&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;interface=nebula*&amp;#34;&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;/li>
+&lt;/ul>
+&lt;p>在 &lt;code>kubeadm init&lt;/code> 之后，执行 &lt;code>kubectl apply -f calico.yaml&lt;/code> 即可。&lt;/p>
+&lt;h3 id="调整-kubelet-的-node-ip">调整 kubelet 的 node-ip&lt;/h3>
+&lt;p>在每个节点都完成了 &lt;code>kubeadm join&lt;/code> 命令之后，需要调整下节点上 kubelet 的 node-ip 参数，修改为 nebula 的 IP 地址,以使 &lt;code>kubectl logs&lt;/code> 之类的命令可以正常工作。&lt;/p>
+&lt;p>一键脚本,注意如果改了 nebula 的网卡名设置，脚本里也要对应的修改:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">sed -i s,&lt;span class="s1">&amp;#39;KUBELET_KUBEADM_ARGS=&amp;#34;[^&amp;#34;]*&amp;#39;&lt;/span>,&lt;span class="s2">&amp;#34;&amp;amp; --node-ip=&lt;/span>&lt;span class="k">$(&lt;/span>ip addr show nebula1 &lt;span class="p">|&lt;/span> grep -Po &lt;span class="s1">&amp;#39;inet \K[\d.]+&amp;#39;&lt;/span>&lt;span class="k">)&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>, /var/lib/kubelet/kubeadm-flags.env
+systemctl restart kubelet
+systemctl restart docker&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>在控制节点上执行 &lt;code>kubectl -n kube-system get pods -o wide&lt;/code>,看 IP 那一列，如果显示 nebula 的地址，就表示成功了。&lt;/p>
+- https://yuchi.me/post/kubernetes-cross-multiple-cloud-over-nebula/ -</description></item><item><title>用 kubeadm 部署简易 kubernetes 集群</title><link>https://yuchi.me/post/deploy-kubernetes-with-kubeadm/</link><pubDate>Wed, 04 Dec 2019 11:34:00 +0800</pubDate><guid>https://yuchi.me/post/deploy-kubernetes-with-kubeadm/</guid><description>Chi's Journal https://yuchi.me/post/deploy-kubernetes-with-kubeadm/ -
+&lt;h2 id="准备">准备&lt;/h2>
+&lt;ul>
+&lt;li>这次部署能用到的设备都是小型号得 vps，零散在不同得公网区域，所以要部署一个跨公网集群。&lt;/li>
+&lt;li>各项配置都使用最简化得模式，比如单主节点，主要目的是自用+测试。&lt;/li>
+&lt;li>通读和参考文档： &lt;a href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm" rel="noreferrer" target="_blank">Bootstrapping clusters with kubeadm&lt;/a>。&lt;/li>
+&lt;/ul>
+&lt;h3 id="设备和网络">设备和网络&lt;/h3>
+&lt;p>三台设备：&lt;/p>
+&lt;ul>
+&lt;li>控制节点（同时也当做worker用）: 赵云, 2 Core, 4G(x1)&lt;/li>
+&lt;li>worker: 赵云，1 Core, 1G(x2)&lt;/li>
+&lt;li>操作系统: debian 9&lt;/li>
+&lt;/ul>
+&lt;p>网络：三台设备在三个地区，各有公网，内网不通。&lt;/p>
+&lt;h3 id="安装依赖">安装依赖&lt;/h3>
+&lt;h4 id="安装-docker">安装 docker&lt;/h4>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">apt-get install -y &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span> apt-transport-https &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span> ca-certificates &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span> curl &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span> gnupg2 &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span> software-properties-common
+curl -fsSL https://download.docker.com/linux/debian/gpg &lt;span class="p">|&lt;/span> sudo apt-key add -
+add-apt-repository &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span> &lt;span class="s2">&amp;#34;deb [arch=amd64] https://download.docker.com/linux/debian \
+&lt;/span>&lt;span class="s2"> &lt;/span>&lt;span class="k">$(&lt;/span>lsb_release -cs&lt;span class="k">)&lt;/span>&lt;span class="s2"> \
+&lt;/span>&lt;span class="s2"> stable&amp;#34;&lt;/span>
+apt-get update &lt;span class="o">&amp;amp;&amp;amp;&lt;/span> apt-get install -y docker-ce docker-ce-cli containerd.io&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>docker 使用 systemd 作为 &lt;a href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#kubeadm-blocks-waiting-for-control-plane-during-installation" rel="noreferrer" target="_blank">cgroupdriver&lt;/a>:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">cat &amp;gt; /etc/docker/daemon.json &lt;span class="s">&amp;lt;&amp;lt;EOF
+&lt;/span>&lt;span class="s">{
+&lt;/span>&lt;span class="s"> &amp;#34;exec-opts&amp;#34;: [&amp;#34;native.cgroupdriver=systemd&amp;#34;],
+&lt;/span>&lt;span class="s"> &amp;#34;log-driver&amp;#34;: &amp;#34;json-file&amp;#34;,
+&lt;/span>&lt;span class="s"> &amp;#34;log-opts&amp;#34;: {
+&lt;/span>&lt;span class="s"> &amp;#34;max-size&amp;#34;: &amp;#34;100m&amp;#34;
+&lt;/span>&lt;span class="s"> },
+&lt;/span>&lt;span class="s"> &amp;#34;storage-driver&amp;#34;: &amp;#34;overlay2&amp;#34;
+&lt;/span>&lt;span class="s">}
+&lt;/span>&lt;span class="s">EOF&lt;/span>
+systemctl restart docker&lt;/code>&lt;/pre>&lt;/div>
+&lt;h4 id="安装-kubeadm-kubelet-kubectl">安装 kubeadm/kubelet/kubectl&lt;/h4>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">apt-get update &lt;span class="o">&amp;amp;&amp;amp;&lt;/span> apt-get install -y apt-transport-https
+curl https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg &lt;span class="p">|&lt;/span> apt-key add -
+cat &lt;span class="s">&amp;lt;&amp;lt;EOF &amp;gt;/etc/apt/sources.list.d/kubernetes.list
+&lt;/span>&lt;span class="s">deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main
+&lt;/span>&lt;span class="s">EOF&lt;/span>
+apt-get update
+apt-get install -y kubelet kubeadm kubectl&lt;/code>&lt;/pre>&lt;/div>
+&lt;h2 id="部署集群">部署集群&lt;/h2>
+&lt;h3 id="初始化控制节点">初始化控制节点&lt;/h3>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">kubeadm init --control-plane-endpoint&lt;span class="o">=&lt;/span>&amp;lt;your-endpoint-fqdn&amp;gt; --pod-network-cidr&lt;span class="o">=&lt;/span>192.168.0.0/16 --image-repository&lt;span class="o">=&lt;/span>registry.aliyuncs.com/google_containers --upload-certs&lt;/code>&lt;/pre>&lt;/div>
+&lt;ul>
+&lt;li>&lt;your\_endpoint\_fqdn> 替换为集群的控制节点 IP 地址或者域名。&lt;/li>
+&lt;li>cidr 按照 flannel 的&lt;a href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#pod-network" rel="noreferrer" target="_blank">文档&lt;/a>设置。&lt;/li>
+&lt;li>国内的机器初始化时，image repository 替换为阿里云得镜像。&lt;/li>
+&lt;/ul>
+&lt;p>根据屏幕输出，配置好 kubeconfig&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">mkdir -p &lt;span class="nv">$HOME&lt;/span>/.kube
+sudo cp -i /etc/kubernetes/admin.conf &lt;span class="nv">$HOME&lt;/span>/.kube/config
+sudo chown &lt;span class="k">$(&lt;/span>id -u&lt;span class="k">)&lt;/span>:&lt;span class="k">$(&lt;/span>id -g&lt;span class="k">)&lt;/span> &lt;span class="nv">$HOME&lt;/span>/.kube/config&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="启用-flannel">启用 flannel&lt;/h3>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">sysctl net.bridge.bridge-nf-call-iptables&lt;span class="o">=&lt;/span>&lt;span class="m">1&lt;/span>
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="worker-加入集群">worker 加入集群&lt;/h3>
+&lt;p>在 kubeadm init 结束时，终端输出的命令，拷贝到 worker 节点上执行。&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash"> kubeadm join k8s.xiatiao.io:6443 --token &amp;lt;your-token&amp;gt; &lt;span class="se">\
+&lt;/span>&lt;span class="se">&lt;/span>--discovery-token-ca-cert-hash sha256:&amp;lt;your-hash&amp;gt;&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>如果错过了这段输出，可以用下面得命令生成：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">kubeadm token create --print-join-command&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="控制节点兼任-worker">控制节点兼任 worker&lt;/h3>
+&lt;p>想在控制节点上也跑一些任务，需要解除限制:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">kubectl taint nodes --all node-role.kubernetes.io/master-&lt;/code>&lt;/pre>&lt;/div>
+&lt;h3 id="节点打标签">节点打标签&lt;/h3>
+&lt;p>三个节点，一个设置为 forwarder， 两个设置为 backend:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">kubectl lable nodes &amp;lt;nodename&amp;gt; &lt;span class="nv">role&lt;/span>&lt;span class="o">=&lt;/span>&amp;lt;role&amp;gt;&lt;/code>&lt;/pre>&lt;/div>
+&lt;h2 id="善后">善后&lt;/h2>
+&lt;p>至此，一个单节点的 kubernetes 集群就配置完成了，但是，由于三个设备在三个公网区域里，内网互不相同。虽然 api-server-address 是公网可用的，但是比如 &lt;code>kubectl logs&lt;/code> 之类的命令，会尝试直接连接 worker 节点的内网地址，显然是不通的。这就导致了，虽然 pods 能被调度到各个节点上，但是集群「内部」的网络是不通的，services 就用不了。&lt;/p>
+&lt;p>解决方案有几种：&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>--advertise-address&lt;/code> 设置为设备的公网地址, 通过 kubeadm 执行的话，要求这个地址在设备上能看到，类似某赵云用了 elastic ip 就不行。&lt;/li>
+&lt;li>配置 nat 转发
+&lt;ul>
+&lt;li>在控制节点上: &lt;code>iptables -t nat -A OUTPUT -d &amp;lt;worker private ip&amp;gt; -j DNAT --to-destination &amp;lt;worker public ip&amp;gt;&lt;/code>&lt;/li>
+&lt;li>在 worker 节点上： &lt;code>iptables -t nat -A OUTPUT -d &amp;lt;master private ip&amp;gt; -j DNAT --to-destination &amp;lt;master public ip&amp;gt;&lt;/code>&lt;/li>
+&lt;/ul>&lt;/li>
+&lt;li>用类似 wireguard, slack/nebula 之类的工具，先把各个设备组一个 overlay network，再部署 kubernetes 集群。&lt;/li>
+&lt;/ul>
+&lt;h2 id="命令备忘">命令备忘&lt;/h2>
+&lt;ul>
+&lt;li>&lt;p>一键毁灭集群：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="k">for&lt;/span> i in &lt;span class="k">$(&lt;/span>kubectl get nodes &lt;span class="p">|&lt;/span> tail -n +2 &lt;span class="p">|&lt;/span> awk &lt;span class="s1">&amp;#39;{print $1}&amp;#39;&lt;/span> &lt;span class="k">)&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">do&lt;/span> kubectl drain &lt;span class="nv">$i&lt;/span> --delete-local-data --force --ignore-daemonsets&lt;span class="p">;&lt;/span> kubectl delete node &lt;span class="nv">$i&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">done&lt;/span>
+kubeadm reset
+iptables -F &lt;span class="o">&amp;amp;&amp;amp;&lt;/span> iptables -t nat -F &lt;span class="o">&amp;amp;&amp;amp;&lt;/span> iptables -t mangle -F &lt;span class="o">&amp;amp;&amp;amp;&lt;/span> iptables -X&lt;/code>&lt;/pre>&lt;/div>&lt;/li>
+&lt;/ul>
+- https://yuchi.me/post/deploy-kubernetes-with-kubeadm/ -</description></item><item><title>beancount 简易入门指南</title><link>https://yuchi.me/post/beancount-intro/</link><pubDate>Thu, 25 Oct 2018 12:25:00 +0800</pubDate><guid>https://yuchi.me/post/beancount-intro/</guid><description>Chi's Journal https://yuchi.me/post/beancount-intro/ -&lt;p>beancount 是一个基于文本、命令行的复式记账软件，上周看到了 &lt;a href="https://wzyboy.im/post/1063.html" rel="noreferrer" target="_blank">wzyboy&lt;/a> 介绍这个工具以及复式记账的基础概念的安利文。花了一点时间入坑之后，自己的资产（存款）、收入、消费去向，一目了然。看到食物消费和打车话费在支出的 TreeMap 里占据的两大块，不禁让我反思起平时的好吃懒做。&lt;/p>
+&lt;p>如果你跟我类似：&lt;/p>
+&lt;ul>
+&lt;li>靠月工资流水生存，有强烈的意愿、需求理清自己的财务状态，搞清楚钱从哪里来、花到哪里去、留下了多少，并借机改善；&lt;/li>
+&lt;li>虽然平时也用过鲨鱼记账、随手记之类的 App，但是觉得每一次消费后掏出手机、打开 App、填写金额时间用途，是一个很重的中断行为；也懒得定期手工录入一批账单；&lt;/li>
+&lt;li>绝大多数消费最终都由银行账户结算，例如通过支付宝绑定信用卡快捷支付，最终只需要统计银行账单即可；&lt;/li>
+&lt;li>懂一点编程（简单的 Python 基础即可），愿意付出一点时间学习；&lt;/li>
+&lt;/ul>
+&lt;p>那么，beancount 这个工具会是一个比较合适的开始。&lt;/p>
+&lt;p>本文将从一个新手了解了基础概念之后，如何迈出第一步，把现存的财务状态映射到 beancount 里的角度，介绍一下个人的实践经验。&lt;/p>
+&lt;h2 id="背景知识">背景知识&lt;/h2>
+&lt;p>后文假设读者已经读过下列文档、或者熟悉下面文档中提及的工具和概念。&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://wzyboy.im/post/1063.html" rel="noreferrer" target="_blank">Beancount —— 命令行复式簿记&lt;/a> wzyboy 的安利文，中文文档&lt;/li>
+&lt;/ul>
+&lt;p>如果有时间，推荐再读一下 beancount 作者写的几篇文档：&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://docs.google.com/document/d/100tGcA4blh6KSXPRGCZpUlyxaRUwFHEvnz_k9DyZFn4/edit" rel="noreferrer" target="_blank">Beancount - The Double-Entry Counting Method&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://docs.google.com/document/d/1G-gsmwK551lSyuHboVLW3xbLhh99JfoKIbNnZSJxteE/edit" rel="noreferrer" target="_blank">Beancount - Tutorial &amp;amp; Example&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;p>还有更多的细节、示例可以参考这个索引&lt;a href="https://docs.google.com/document/d/1RaondTJCS_IUPBHFNdT8oqFKJjVJDsfsn6JEjBG04eA/edit" rel="noreferrer" target="_blank">文档&lt;/a>。&lt;/p>
+&lt;h2 id="目录结构">目录结构&lt;/h2>
+&lt;p>使用如下所示的目录结构：&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">~/Documents/accounting
+├── documents
+│   ├── Assets/
+│   ├── Expenses/
+│   ├── Income/
+│   └── Liabilities/
+├── documents.tmp/
+├── importers
+│ ├── __init__.py
+├── yc.bean
+└── yc.import&lt;/code>&lt;/pre>
+&lt;ul>
+&lt;li>~/Documents/accounting: 项目的根目录，放在任何想放的地方;&lt;/li>
+&lt;li>documents: 用于导入第三方数据后，使用 bean-file 归类存档原文件，执行 &lt;code>mkdir documents/{Assets,Expenses,Inconme,Liabilities}&lt;/code> 创建这些目录;&lt;/li>
+&lt;li>documents.tmp: 用于临时存放待导入的第三方数据，比如银行卡账单，可以是其他路径，比如 &lt;code>/tmp&lt;/code>, bean-extract, bean-file 这些脚本都要用到这个目录;&lt;/li>
+&lt;li>importers: 用于存放自定义的导入脚本，目前自带的导入器足够使用，可以先不管这个目录;&lt;/li>
+&lt;li>yc.import: 实际上是一个 Python 脚本，用于定义导入器的配置，后面细说;&lt;/li>
+&lt;li>yc.bean: 是实际的账簿文件，账户、交易记录都在这里，生成报表也使用这个文件,可以将账簿文件拆分成多个小文件，再使用 &lt;code>include&lt;/code> 指令拼接，类似 C 语言或者 Python 里的 &lt;code>import&lt;/code>;&lt;/li>
+&lt;/ul>
+&lt;details>&lt;summary>单文件账簿还是拆分多文件账簿？
+&lt;/summary>
+- 刚开始建议用一个 `.bean` 文件管理所有的记录，熟悉工具的使用流程、有了明确的需求之后再拆分;
+- 如果使用 emacs 的 orgmode 编辑账簿文件，建议一直使用一个 `.bean` 文件，非常好用;
+&lt;/details>
+&lt;p>刚开始使用，只需要关注主账簿文件 &lt;code>yc.bean&lt;/code> 就行，我们来一探究竟吧。&lt;/p>
+&lt;h2 id="开设账户">开设账户&lt;/h2>
+&lt;p>我的 &lt;code>yc.bean&lt;/code> 文件顶层有三部分: Options, Accounts, MonthlyReconciliation，分别对应账簿文件的选项，账户，每月对账。&lt;/p>
+&lt;h3 id="options">Options&lt;/h3>
+&lt;p>设置账簿的 title，定义账簿里会用到的货币。&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">\* Options
+option &amp;#34;title&amp;#34; &amp;#34;My Personal Ledger&amp;#34;
+option &amp;#34;operating_currency&amp;#34; &amp;#34;CNY&amp;#34;
+option &amp;#34;operating_currency&amp;#34; &amp;#34;USD&amp;#34;&lt;/code>&lt;/pre>
+&lt;h3 id="accounts">Accounts&lt;/h3>
+&lt;p>有五种账户类型: Assets,Liabilities,Equity,Income,Expenses。分别对应资产、负债、初始化账簿时已有的数据、收入、支出，详细含义可以看上面提及的推荐阅读文档里。&lt;/p>
+&lt;p>在 benacount 里会隐式创建树形账户，也就是如果开了一个账户叫做： &lt;code>Assets:Bank:BoC:CardXXXX&lt;/code>, 那么会自动生成账户 &lt;code>Assets:Bank:BoC&lt;/code>, &lt;code>Assets:Bank&lt;/code>, &lt;code>Assets&lt;/code> 。我的做法是原则上用现实世界里的最细分的账户映射 beancount 里的账户，结合账户的实际用途设置账户名。&lt;/p>
+&lt;h4 id="如何选择账户初始日期">如何选择账户初始日期？&lt;/h4>
+&lt;p>偷懒的话可以选择 1970-01-01。&lt;/p>
+&lt;p>我的做法是：Assets 类账户选择我开始使用 beancount 的日期，Liabilities、Expenses 账户用生日，Income 选择当前这份工作的日期。&lt;/p>
+&lt;h4 id="assets">Assets&lt;/h4>
+&lt;p>假设我在招商银行有两张储蓄卡，其中一张开通了朝朝盈的理财服务并且用于日常消费，另一张卡用于每月定额存款，积累资金用于凑购房首付，那么我会这样设置 Assets 账户(XXXX 是卡号末四位，下面同理)：&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">1970-01-01 open Assets:Bank:CMB:CardXXXX:Deposit CNY
+1970-01-01 open Assets:Bank:CMB:CardXXXX:ZZY CNY&lt;/code>&lt;/pre>
+&lt;p>对于存款卡，因为只用于特定用途，不会挪作他用，还有别的账户里也有存款用于同样的用途，比如政府的住房公积金，那么我这样设置账户：&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">1970-01-01 open Assets:Saving:HouseFund:Bank:CMB:CardXXXX:Deposit CNY
+1970-01-01 open Assets:Saving:HouseFund:Goverment CNY&lt;/code>&lt;/pre>
+&lt;h4 id="liabilities">Liabilities&lt;/h4>
+&lt;p>假设我在招商银行有一张银联信用卡，一张 Visa 信用卡；在交通银行有一张银联信用卡，一张 Vsia 信用卡。由于招商银行共享额度、合并账单、征信内只有一个账户；交通银行虽然也共享额度，但是拆分账单，每个账单要单独还款，并且在征信系统内一卡一账户，我这样设置账户：&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">1970-01-01 open Liabilities:CreditCards:CMB CNY
+1970-01-01 open Liabilities:Creditcards:COMM:CardVisaXXXX CNY
+1970-01-01 open Liabilities:Creditcards:COMM:CardUnionXXXX CNY&lt;/code>&lt;/pre>
+&lt;p>这样既可以既可以对单个账户断言 balance，也可以对单个银行对断言 balance。&lt;/p>
+&lt;h4 id="income">Income&lt;/h4>
+&lt;p>工资收入可以设置账户 Income:CompanyName:Salary 就行, 如果有饭补、报销之类的，可以单写 Income:CompanyName:FoodSubsidy, Income:CompanyName:Reimbursement.
+这里用 event 指令，可以记录下哪天加入公司，比如 &lt;code>2018-01-01 event &amp;quot;入职 XX&amp;quot;&lt;/code> 。&lt;/p>
+&lt;h4 id="expenses">Expenses&lt;/h4>
+&lt;p>基本原则同上，我在 Expenses 分类下设置了如下几种账户：&lt;/p>
+&lt;ul>
+&lt;li>&lt;p>政府相关的：主要是五险一金、税之类。&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">1970-01-01 open Expenses:Government:Pension CNY
+1970-01-01 open Expenses:Government:Unemployment CNY
+1970-01-01 open Expenses:Government:MedicalCare CNY
+1970-01-01 open Expenses:Government:IncomeTax CNY&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>&lt;p>日常消费，按照衣食行分了几大类，可以包含交通、食物、下馆子、日用杂物、买书、订阅（软件、VPS之类）以及宠物的支出。基本都在三级以内，再通过交易的 &lt;a href="https://docs.google.com/document/d/1wAMVrKIA2qtRGmoVDSUBJGmYZSygUaR0uOMW1GV3YE0/edit#heading=h.2xx3dcvvf0r8" rel="noreferrer" target="_blank">tag&lt;/a> 标记消费的具体支出，比如食物相关的交易记录会打上这些 Tag：早餐、日常饮用水、饮料、零食等等，可以按需使用，最终在 fava 生成的网页里可以按照 tag 过滤查看。&lt;/p>&lt;/li>
+&lt;li>&lt;p>住的消费相对固定，并且因为是在北京租房，也是一笔不小的支出，单独开设一类账户用来管理，建议使用当前住宿房屋的简称，比如：Expenses:Lofter0817:Rent, Expenses:Lofter0817:Utility。&lt;/p>&lt;/li>
+&lt;/ul>
+&lt;h4 id="equity">Equity&lt;/h4>
+&lt;p>目前我只设置了一个 Equity 账户 Equity:Opening-Balances，用来平衡初始资产、负债账户时的会计恒等式。也就是，我想往一个银行卡账户里添加 1000 元，并且想保持平衡，那么需要从某个账户减 1000 元，在初始化时，这个账户就是 Equity:Opening-Balances。一个示例：&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">1970-01-01 open Assets:Bank:CMB:CardXXXX CNY
+1991-05-21 pad Assets:Bank:CMB:C6698 Equity:Opening-Balances
+2018-10-17 balance Assets:Bank:CMB:C6698 11912.77 CNY&lt;/code>&lt;/pre>
+&lt;h3 id="balance">Balance&lt;/h3>
+&lt;p>设置了账户之后，要把对应的现实账户的状态反应出来，需要用 &lt;code>balance&lt;/code> 指令进行断言操作，用 &lt;code>pad&lt;/code> 指令进行辅助。比如在设置账户的当时，银行卡内有存款 1000 元，可以在 &lt;code>open&lt;/code> 账户那行之后添加变成下面的结构，注意 beancount 默认交易都在一天的开始发生，所以 balance 断言要写在第二天，表示截止到第二天零点的情况。&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">1970-01-01 open Assets:Bank:CMB:Card0817
+1970-01-01 pad Assets:Bank:CMB:Card0817 Equity:Opening-Balances
+1970-01-02 balance Assets:Bank:CMB:Card0817 1000 CNY&lt;/code>&lt;/pre>
+&lt;p>其他账户依照此方法设置即可。&lt;/p>
+&lt;h2 id="导入数据">导入数据&lt;/h2>
+&lt;p>除了账户和 balance 断言， &lt;code>.bean&lt;/code> 文件里大部分内容是一笔笔交易记录，一个笔交易在 beancount 里一般长这样：&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">2018-10-22 * &amp;#34;描述&amp;#34;
+card: &amp;#34;CardXXXX&amp;#34;
+date: 2018-10-21
+Liabilities:CreditCards:CMB -1921.00 CNY
+Expenses:Other&lt;/code>&lt;/pre>
+&lt;p>2018-10-22 是银行记帐日期，&amp;raquo;*&amp;raquo; 号表示交易确认无误，接着是交易描述；后两行是 metadata，可以用于过滤；接下来是交易涉及的账户，有减操作的账户，就有加操作的账户，这里 Expenses:Other 账户没有写加金额，是因为加操作只涉及这一个账户，beancount 会自行补齐数据。更详细的可以参考 &lt;a href="https://docs.google.com/document/d/1wAMVrKIA2qtRGmoVDSUBJGmYZSygUaR0uOMW1GV3YE0/edit#" rel="noreferrer" target="_blank">Beancount Language Syntax&lt;/a> 。&lt;/p>
+&lt;p>每笔交易都这么手写一遍就太低效率了，还好 beancount 支持从导入第三方数据，前文提到的 &lt;code>importers&lt;/code> 目录内就可以用来存放自定义的导入脚本，不过自带 csv 导入器就可以解决目前绝大部分需求。&lt;/p>
+&lt;h3 id="获取数据">获取数据&lt;/h3>
+&lt;p>目前国内部分银行提供 csv 各式的对账单，比如招商银行可以登录个人网银后找到对账单下载；也有银行不提供 csv、Excel 各式的对账单下载，可以尝试下面两个方法：&lt;/p>
+&lt;ul>
+&lt;li>如果银行提供网页版对账单，并且账单页面内容是 html table，可以使用 Chrome 插件&lt;a href="https://chrome.google.com/webstore/detail/table-capture/iebpjdmgckacbodjpijphcplhebcmeop" rel="noreferrer" target="_blank"> Table-Capture&lt;/a> 把页面里的 table 导出到 Google Spreadsheet，再导出为 csv;&lt;/li>
+&lt;li>银行应该都会提供 pdf 各式的对账单，可以尝试用 &lt;a href="https://tabula.technology/" rel="noreferrer" target="_blank">Tabula&lt;/a> 这个工具，从 pdf 文件里解析账单表格并导出;&lt;/li>
+&lt;/ul>
+&lt;p>经过测试，以上两个方法能够搞定招商、交通、中信、浦发这四个银行账单。&lt;/p>
+&lt;h3 id="准备数据">准备数据&lt;/h3>
+&lt;p>获取到 csv 各式的数据后，需要做一些准备工作：&lt;/p>
+&lt;ul>
+&lt;li>去除文件里的奇怪的符号，比如交通银行的账单里会包含 &lt;code>^M&lt;/code> 这个符号，用 &lt;code>C-c C-m&lt;/code> 可以在终端里敲出这个字符；&lt;/li>
+&lt;li>金额改为只保留数字部分；&lt;/li>
+&lt;li>把文件编码转换为 utf-8: &lt;code>iconv -f gbk -t UTF-8 file &amp;gt; file.utf-8&lt;/code> ；&lt;/li>
+&lt;li>转换文件的换行方式: &lt;code>dos2unix file.utf-8&lt;/code> ；&lt;/li>
+&lt;/ul>
+&lt;h3 id="import-配置">import 配置&lt;/h3>
+&lt;p>我的 import 配置文件 &lt;code>yc.imoprt&lt;/code> 抹去敏感信息之后示例如下下方的代码。&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-python" data-lang="python">&lt;span class="ch">#!/usr/bin/env python&lt;/span>
+&lt;span class="kn">import&lt;/span> &lt;span class="nn">os&lt;/span>
+&lt;span class="kn">import&lt;/span> &lt;span class="nn">sys&lt;/span>
+&lt;span class="kn">import&lt;/span> &lt;span class="nn">beancount.ingest.extract&lt;/span>
+&lt;span class="kn">from&lt;/span> &lt;span class="nn">beancount.ingest.importers&lt;/span> &lt;span class="kn">import&lt;/span> &lt;span class="n">csv&lt;/span>
+&lt;span class="n">beancount&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">ingest&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">extract&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">HEADER&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="s1">&amp;#39;&amp;#39;&lt;/span>
+&lt;span class="n">CONFIG&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;span class="c1"># CMB Credit&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Importer&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;span class="p">{&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">DATE&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;记账日期&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">TXN_DATE&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;交易日期&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">NARRATION1&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;交易摘要&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">AMOUNT_DEBIT&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;人民币金额&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">LAST4&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;卡号后四位&amp;#39;&lt;/span>
+&lt;span class="p">},&lt;/span>
+&lt;span class="n">account&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s1">&amp;#39;Liabilities:CreditCards:CMB&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">currency&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s1">&amp;#39;CNY&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">regexps&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s1">&amp;#39;&lt;/span>&lt;span class="se">\t&lt;/span>&lt;span class="s1">对账标志&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">last4_map&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;span class="s2">&amp;#34;0000&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s2">&amp;#34;招行 0000&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="p">},&lt;/span>
+&lt;span class="c1"># categorizer=guess.guess2&lt;/span>
+&lt;span class="p">),&lt;/span>
+&lt;span class="c1"># COMM Credit 0000&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Importer&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;span class="p">{&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">DATE&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;记账日期&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">TXN_DATE&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;交易日期&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">NARRATION1&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;交易说明&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">AMOUNT_DEBIT&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;清算币种/金额&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">csv&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">Col&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">LAST4&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s1">&amp;#39;卡号末四位&amp;#39;&lt;/span>
+&lt;span class="p">},&lt;/span>
+&lt;span class="n">account&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s1">&amp;#39;Liabilities:CreditCards:COMM:C0000&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">currency&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s1">&amp;#39;CNY&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">regexps&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s1">&amp;#39;交行0000&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">skip_lines&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="n">last4_map&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;span class="s2">&amp;#34;0000&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s2">&amp;#34;交行 0000&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;span class="p">},&lt;/span>
+&lt;span class="c1"># categorizer=guess.guess2]&lt;/span>
+&lt;span class="p">)&lt;/span>
+&lt;span class="p">]&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>csv.Col.XXX 对应的是 csv 文件的 header，新加账户、账单的话对照修改就行。整体执行流程大约是，对于一个待导入文件：&lt;/p>
+&lt;ol>
+&lt;li>每个 importer 判断自己是否会处理这个文件，如果会处理，交给这个 imoprter 处理导入，并不再往下判断；csv importer 是通过 regexps 参数里指定的正则匹配整个文件内容，看能否匹配上。&lt;/li>
+&lt;li>由于交行（其他银行也有可能）一卡一账单，账单的头部都一样，我在 csv header 下面插入一行 “交行0000”（0000是卡号末四位）来标记此文件是哪张卡的账单，应该对应到哪个账户，再配置 skip_lines 参数，在实际导入的时候跳过这一行。&lt;/li>
+&lt;li>last4_map 会匹配卡号末四位，生成 &lt;code>card: 交行 0000&lt;/code> 写到交易的 metadata 里。&lt;/li>
+&lt;/ol>
+&lt;h3 id="执行导入">执行导入&lt;/h3>
+&lt;p>把准备好的账单文件放到上面提及的 documents.tmp 目录里，再执行:&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">bean-extract yc.import &lt;span class="si">${&lt;/span>&lt;span class="nv">PWD&lt;/span>&lt;span class="si">}&lt;/span>/documents.tmp &amp;gt; tmp.bean&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>我习惯先把记录先导出到临时账簿文件里，检查一下交易记录、修正一部分交易描述、添加 Expenses 账户，再导出到总账簿文件里。&lt;/p>
+&lt;p>添加 Expenses 账户这一步可以尝试自定义 categorizer 来实现自动化，比如交易描述里包含“饿了么”自动归到 Expenses:Food 账户里。我还没有实现这部分，可以参考这个 &lt;a href="https://bitbucket.org/blais/beancount/pull-requests/24/improve-ingestimporterscsv/diff" rel="noreferrer" target="_blank">Pull Request&lt;/a>。&lt;/p>
+&lt;p>导入完成后，再执行下面的命令，把原文件归档到 documents 目录里。&lt;/p>
+&lt;pre>&lt;code class="language-nil" data-lang="nil">bean-file yc.import ${PWD}/documents.tmp -o documents&lt;/code>&lt;/pre>
+&lt;h2 id="我的工作流">我的工作流&lt;/h2>
+&lt;p>目前我的大部分支出会落到信用卡里，少量走借记卡，极少现金。信用卡出账单日也统一到一两天之内。整体工作流程大概是这样：&lt;/p>
+&lt;ol>
+&lt;li>每月最后一个账单出来后，整理好账单文件，用 bean-extract 导入账单；&lt;/li>
+&lt;li>对 Liabilities 账户进行 balance 断言；&lt;/li>
+&lt;li>在还款日前还款后，对 Assets 账户断言；&lt;/li>
+&lt;li>发薪日再次对各类账户进行一次断言；&lt;/li>
+&lt;li>每月检查个账户的错误情况，fava 生成的网页上有一个 Errors 子页面；回顾支出情况；&lt;/li>
+&lt;/ol>
+&lt;h2 id="总结">总结&lt;/h2>
+&lt;p>开始说要记账、规划自己的财务状况有半年多了，断断续续用过几款 App，都没有能完全坚持下来，直到在 wzyboy 的博客上看到 beancount 工具的安利，有如开挂一样，个人的财务状况从整体到细节都能看的清楚，也是我喜欢的纯文本工具，信息不会留在第三方、方便各种编辑、导入导出、备份。&lt;/p>
+&lt;p>在入门上手期间，通过邮件向 &lt;a href="https://wzyboy.im/" rel="noreferrer" target="_blank">wzyboy&lt;/a> 请教了不少疑问，都得到了细致及时的解答，表示感谢。&lt;/p>- https://yuchi.me/post/beancount-intro/ -</description></item></channel></rss>

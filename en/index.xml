@@ -1,0 +1,76 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Chi's Journal</title><link>https://yuchi.me/en/</link><description>Recent content on Chi's Journal</description><generator>Hugo -- gohugo.io</generator><language>zh</language><lastBuildDate>Thu, 30 Apr 2020 15:21:00 +0800</lastBuildDate><atom:link href="https://yuchi.me/en/index.xml" rel="self" type="application/rss+xml"/><item><title>Setup build environment for Android app in Ubuntu 18</title><link>https://yuchi.me/en/verse/setup-build-environment-for-android-app-in-ubuntu-18/</link><pubDate>Thu, 30 Apr 2020 15:21:00 +0800</pubDate><guid>https://yuchi.me/en/verse/setup-build-environment-for-android-app-in-ubuntu-18/</guid><description>Chi's Journal https://yuchi.me/en/verse/setup-build-environment-for-android-app-in-ubuntu-18/ -
+&lt;h2 id="install-sdk-command-line-tools">Install sdk command-line tools&lt;/h2>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">sudo apt install unzip &lt;span class="c1"># ensure unzip installed&lt;/span>
+sudo mkdir -p /usr/local/android-sdk/tools
+&lt;span class="nb">cd&lt;/span> /tmp
+wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip
+unzip commandlinetools-linux-6200805_latest.zip
+sudo mv tools/* /usr/local/android-sdk/tools/
+&lt;span class="c1"># setup path, change ~/.bashrc to your shellrc&lt;/span>
+&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;export PATH=&lt;/span>&lt;span class="nv">$PATH&lt;/span>&lt;span class="s2">:/usr/local/android-sdk/tools/bin:/usr/local/android-sdk/platform-tools&amp;#34;&lt;/span> &amp;gt;&amp;gt; ~/.bashrc
+&lt;span class="nb">source&lt;/span> ~/.bashrc&lt;/code>&lt;/pre>&lt;/div>
+&lt;h2 id="install-oracle-jdk8">Install oracle-jdk8&lt;/h2>
+&lt;p>Skip this section if jdk8 is already set.&lt;/p>
+&lt;p>Oracle JDK8 will be installed via &lt;a href="https://launchpad.net/~kkeiichi/+archive/ubuntu/java" rel="noreferrer" target="_blank">ppa:kkeiichi/java&lt;/a>, jdk-8u241-linux-x64.tar.gz should be downloaded and uploaded to the server before continuing.&lt;/p>
+&lt;p>Download link: &lt;a href="https://www.oracle.com/java/technologies/javase-jdk8-downloads.html" rel="noreferrer" target="_blank">Official Site&lt;/a> &lt;a href="https://www.dropbox.com/s/yth6qme9zmuv3ow/jdk-8u241-linux-x64.tar.gz?dl=0" rel="noreferrer" target="_blank">DropboxBackup&lt;/a>(package install script will check file shasum)&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">sudo mkdir -p /var/cache/oracle-java8-installer-local
+sudo cp jdk-8u241-linux-x64.tar.gz /var/cache/oracle-java8-installer-local/
+sudo add-apt-repository ppa:kkeiichi/java
+sudo atp update
+sudo apt install oracle-java8-installer-local
+sudo apt install oracle-java8-set-default-local &lt;span class="c1"># set default&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;h2 id="install-sdk">Install sdk&lt;/h2>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">mkdir ~/.android
+&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;export ANDROID_HOME=~/.android&amp;#34;&lt;/span> &amp;gt;&amp;gt; ~/.bashrc
+&lt;span class="nb">source&lt;/span> ~/.bashrc
+&lt;span class="c1"># accept linceses&lt;/span>
+yes &lt;span class="p">|&lt;/span> sdkmanager --sdk_root&lt;span class="o">=&lt;/span>&lt;span class="nv">$ANDROID_HOME&lt;/span> --licenses
+&lt;span class="c1"># download sdk&lt;/span>
+yes &lt;span class="p">|&lt;/span> sdkmanager --sdk_root&lt;span class="o">=&lt;/span>&lt;span class="nv">$ANDROID_HOME&lt;/span> &lt;span class="s2">&amp;#34;platforms;android-28&amp;#34;&lt;/span> &lt;span class="s2">&amp;#34;build-tools;28.0.3&amp;#34;&lt;/span>&lt;/code>&lt;/pre>&lt;/div>- https://yuchi.me/en/verse/setup-build-environment-for-android-app-in-ubuntu-18/ -</description></item><item><title>Export Org-mode in Chinese to PDF with custom latex class</title><link>https://yuchi.me/en/post/export-org-mode-in-chinese-to-pdf-with-custom-latex-class/</link><pubDate>Mon, 20 Apr 2020 18:50:00 +0800</pubDate><guid>https://yuchi.me/en/post/export-org-mode-in-chinese-to-pdf-with-custom-latex-class/</guid><description>Chi's Journal https://yuchi.me/en/post/export-org-mode-in-chinese-to-pdf-with-custom-latex-class/ -&lt;p>A simple configuration to export org-mode doc in chinese to pdf with custom latex class, based on &lt;a href="https://github.com/redguardtoo/emacs.d" rel="noreferrer" target="_blank">redguardtoo/emacs.d&lt;/a>.&lt;/p>
+&lt;p>Features are:&lt;/p>
+&lt;ul>
+&lt;li>use &lt;a href="https://github.com/ElegantLaTeX/ElegantPaper" rel="noreferrer" target="_blank">ElegantLaTeX/ElegantPaper&lt;/a> as default template;&lt;/li>
+&lt;li>use &lt;a href="https://github.com/gpoore/minted" rel="noreferrer" target="_blank">gpoore/minted&lt;/a> to highlight code;&lt;/li>
+&lt;li>use &lt;code>ctex&lt;/code> package&amp;rsquo;s default font settings;&lt;/li>
+&lt;/ul>
+&lt;p>Download &lt;a href="https://github.com/ElegantLaTeX/ElegantPaper/blob/master/elegantpaper.cls" rel="noreferrer" target="_blank">elegantpaper.cls&lt;/a> to the same directory contanis &lt;code>org&lt;/code> files。&lt;/p>
+&lt;p>Add configs below to your &lt;code>~/.custom.el&lt;/code> ：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-lisp" data-lang="lisp">&lt;span class="p">(&lt;/span>&lt;span class="nv">with-eval-after-load&lt;/span> &lt;span class="ss">&amp;#39;ox-latex&lt;/span>
+&lt;span class="c1">;; http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export&lt;/span>
+&lt;span class="c1">;; latexmk runs pdflatex/xelatex (whatever is specified) multiple times&lt;/span>
+&lt;span class="c1">;; automatically to resolve the cross-references.&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="k">setq&lt;/span> &lt;span class="nv">org-latex-pdf-process&lt;/span> &lt;span class="o">&amp;#39;&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;latexmk -xelatex -quiet -shell-escape -f %f&amp;#34;&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="nv">add-to-list&lt;/span> &lt;span class="ss">&amp;#39;org-latex-classes&lt;/span>
+&lt;span class="o">&amp;#39;&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;elegantpaper&amp;#34;&lt;/span>
+&lt;span class="s">&amp;#34;\\documentclass[lang=cn]{elegantpaper}
+&lt;/span>&lt;span class="s"> [NO-DEFAULT-PACKAGES]
+&lt;/span>&lt;span class="s"> [PACKAGES]
+&lt;/span>&lt;span class="s"> [EXTRA]&amp;#34;&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\section{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\section*{%s}&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\subsection{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\subsection*{%s}&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\subsubsection{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\subsubsection*{%s}&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\paragraph{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\paragraph*{%s}&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;\\subparagraph{%s}&amp;#34;&lt;/span> &lt;span class="o">.&lt;/span> &lt;span class="s">&amp;#34;\\subparagraph*{%s}&amp;#34;&lt;/span>&lt;span class="p">)))&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="k">setq&lt;/span> &lt;span class="nv">org-latex-listings&lt;/span> &lt;span class="ss">&amp;#39;minted&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;span class="p">(&lt;/span>&lt;span class="nv">add-to-list&lt;/span> &lt;span class="ss">&amp;#39;org-latex-packages-alist&lt;/span> &lt;span class="o">&amp;#39;&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="s">&amp;#34;minted&amp;#34;&lt;/span>&lt;span class="p">)))&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>Add to the top of your &lt;code>org&lt;/code> file：&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-org" data-lang="org">&lt;span class="cs">#+LATEX_COMPILER&lt;/span>&lt;span class="c">: xelatex&lt;/span>
+&lt;span class="cs">#+LATEX_CLASS&lt;/span>&lt;span class="c">: elegantpaper&lt;/span>
+&lt;span class="cs">#+OPTIONS&lt;/span>&lt;span class="c">: prop:t&lt;/span>&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>Install dependencies of &lt;code>minted&lt;/code> :&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">brew install pygments&lt;/code>&lt;/pre>&lt;/div>
+&lt;p>Move cursor to the subtree to be exported, and press key &lt;code>C-c C-e C-s l p&lt;/code> .&lt;/p>
+&lt;p>*&lt;strong>&lt;em>Ref&lt;/em>&lt;/strong>*&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export" rel="noreferrer" target="_blank">http://orgmode.org/worg/org-faq.html#using-xelatex-for-pdf-export&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://orgmode.org/manual/Export-Settings.html#Export-settings" rel="noreferrer" target="_blank">https://orgmode.org/manual/Export-Settings.html#Export-settings&lt;/a>&lt;/li>
+&lt;/ul>- https://yuchi.me/en/post/export-org-mode-in-chinese-to-pdf-with-custom-latex-class/ -</description></item><item><title>socat</title><link>https://yuchi.me/en/verse/socat/</link><pubDate>Fri, 20 Dec 2019 18:07:00 +0800</pubDate><guid>https://yuchi.me/en/verse/socat/</guid><description>Chi's Journal https://yuchi.me/en/verse/socat/ -&lt;p>snippets:&lt;/p>
+&lt;ul>
+&lt;li>&lt;p>simple udp echo server: echo payload with client ip:port&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">socat -d -d udp-recvfrom:1926,fork system:&lt;span class="s2">&amp;#34;echo \&amp;#34;\$SOCAT_PEERADDR:\$SOCAT_PEERPORT\&amp;#34;; cat&amp;#34;&lt;/span>
+client &amp;gt; &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;0817&amp;#34;&lt;/span> &lt;span class="p">|&lt;/span> socat - udp-sendto:server-ip:1926&lt;/code>&lt;/pre>&lt;/div>&lt;/li>
+&lt;li>&lt;p>simple tcp echo server: echo payload with client ip:port&lt;/p>
+&lt;div class="highlight">&lt;pre class="chroma">&lt;code class="language-bash" data-lang="bash">socat -d -d tcp-l:1926,fork system:&lt;span class="s2">&amp;#34;echo \&amp;#34;\$SOCAT_PEERADDR:\$SOCAT_PEERPORT\&amp;#34;; cat&amp;#34;&lt;/span>
+client &amp;gt; &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;0817&amp;#34;&lt;/span> &lt;span class="p">|&lt;/span> socat tcp:server-ip:1926 -&lt;/code>&lt;/pre>&lt;/div>&lt;/li>
+&lt;/ul>
+- https://yuchi.me/en/verse/socat/ -</description></item></channel></rss>
